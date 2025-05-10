@@ -62,7 +62,7 @@ class AIService:
         
         # Log the full prompt for debugging
         print("\n" + "="*80)
-        print(f"TEAM {minion.team_id} MINION PROMPT:")
+        print(f"Minion {minion.name} PROMPT:")
         print("="*80)
         print("GESTURE:", user_prompt["gesture"])
         print("\nINSTRUCTIONS:")
@@ -77,7 +77,7 @@ class AIService:
             print(" ".join(row))
         print("="*80)
         
-        logger.info(f"Making OpenAI API call for Team {minion.team_id} Minion")
+        logger.info(f"Making OpenAI API call for Minion {minion.name}")
         logger.debug(f"Prompt: {json.dumps(user_prompt, indent=2)}")
         
         try:
@@ -101,7 +101,7 @@ class AIService:
                 
                 # Print the response for debugging
                 print("\n" + "="*80)
-                print(f"TEAM {minion.team_id} MINION RESPONSE:")
+                print(f"MINION {minion.name} RESPONSE:")
                 print("="*80)
                 print("MOVE:", result.get("next_move", "stay"))
                 print("\nSTRATEGY:", result.get("strategy", "No strategy available"))

@@ -83,3 +83,8 @@ TEAM2_MINION_2_INSTRUCTIONS = [
     "if the player gestures thumbs down, you should go for sushi",
     "if the player make a finger heart, you should go for donut",
 ]
+
+TEAM1_MINION_1_POWER = 2
+TEAM1_MINION_2_POWER = 98
+TEAM2_MINION_1_POWER = 40
+TEAM2_MINION_2_POWER = 60

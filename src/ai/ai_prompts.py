@@ -3,6 +3,8 @@ AI Prompts and Tools for the Signal & Strategy game.
 Contains prompts, tools, and configurations for all OpenAI calls.
 """
 
+from src.utils.constants import TEAM1_MINION_1, TEAM1_MINION_2, TEAM2_MINION_1, TEAM2_MINION_2
+
 # System prompt for minion decision making
 MINION_SYSTEM_PROMPT = """
 You are an intelligent NPC reasoning agent in a strategic 8x10 board game. Your objective is to collect valuable items on the board while avoiding enemies and responding to live guidance from your guide. You must decide your next action based on incoming signals, instructions, map state, and your own personality attributes.
@@ -195,14 +197,14 @@ def format_grid_for_prompt(grid, minion_pos, team_id):
                 row.append("D")  # Donut
             elif cell == 3:
                 row.append("B")  # Banana
-            elif team_id == 1 and (cell == 4 or cell == 6):
+            elif team_id == 1 and (cell == TEAM1_MINION_1 or cell == TEAM1_MINION_2):
                 row.append("T")  # Your teammate
-            elif team_id == 2 and (cell == 5 or cell == 7):
-                row.append("O")  # Your Opponents
-            elif team_id == 1 and (cell == 5 or cell == 7):
+            elif team_id == 1 and (cell == TEAM2_MINION_1 or cell == TEAM2_MINION_2):
                 row.append("O")  # Your Opponents   
-            elif team_id == 2 and (cell == 4 or cell == 6):
-                row.append("T")  # Your teammate
+            elif team_id == 2 and (cell == TEAM2_MINION_1 or cell == TEAM2_MINION_2):
+                row.append("T")  # Your Opponents
+            elif team_id == 2 and (cell == TEAM1_MINION_1 or cell == TEAM1_MINION_2):
+                row.append("O")  # Your teammate
             else:
                 row.append("?")
         result.append(row)

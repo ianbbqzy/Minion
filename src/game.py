@@ -12,7 +12,8 @@ import asyncio, threading
 from src.utils.constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, GRID_WIDTH, GRID_HEIGHT,
     WEBCAM_WIDTH, WEBCAM_HEIGHT, PREVIEW_GAP, BLACK, WHITE,
-    BUTTON_COLOR, BUTTON_HOVER_COLOR, GRADIENT_COLORS
+    BUTTON_COLOR, BUTTON_HOVER_COLOR, GRADIENT_COLORS, EMPTY,
+    TEAM1_MINION_1, TEAM1_MINION_2, TEAM2_MINION_1, TEAM2_MINION_2, TEAM1_MINION_1_INSTRUCTIONS, TEAM1_MINION_2_INSTRUCTIONS, TEAM2_MINION_1_INSTRUCTIONS, TEAM2_MINION_2_INSTRUCTIONS, TEAM1_MINION_1_POWER, TEAM1_MINION_2_POWER, TEAM2_MINION_1_POWER, TEAM2_MINION_2_POWER
 )
 from src.utils.game_state import GameState
 from src.rendering.sprites import SpriteManager
@@ -24,7 +25,6 @@ from src.ai.gesture_recognition import GestureRecognizer
 from src.entities.minion import Minion
 from src.entities.guide import Guide
 from src.ai.ai_service import AIService
-from src.utils.constants import TEAM1_MINION_1, TEAM1_MINION_2, TEAM2_MINION_1, TEAM2_MINION_2, TEAM1_MINION_1_INSTRUCTIONS, TEAM1_MINION_2_INSTRUCTIONS, TEAM2_MINION_1_INSTRUCTIONS, TEAM2_MINION_2_INSTRUCTIONS
 
 class Game:
     def __init__(self):
@@ -154,10 +154,10 @@ class Game:
             "style": "hectic"
         }
         
-        self.team1_minion_1 = Minion(1, self.game_state.team1_minion_1_pos, team1_personality, TEAM1_MINION_1_INSTRUCTIONS)
-        self.team1_minion_2 = Minion(1, self.game_state.team1_minion_2_pos, team1_personality, TEAM1_MINION_2_INSTRUCTIONS)
-        self.team2_minion_1 = Minion(2, self.game_state.team2_minion_1_pos, team2_personality, TEAM2_MINION_1_INSTRUCTIONS)
-        self.team2_minion_2 = Minion(2, self.game_state.team2_minion_2_pos, team2_personality, TEAM2_MINION_2_INSTRUCTIONS)
+        self.team1_minion_1 = Minion(1, self.game_state.team1_minion_1_pos, TEAM1_MINION_1_POWER, "Team 1 Minion 1", team1_personality, TEAM1_MINION_1_INSTRUCTIONS)
+        self.team1_minion_2 = Minion(1, self.game_state.team1_minion_2_pos, TEAM1_MINION_2_POWER, "Team 1 Minion 2", team1_personality, TEAM1_MINION_2_INSTRUCTIONS)
+        self.team2_minion_1 = Minion(2, self.game_state.team2_minion_1_pos, TEAM2_MINION_1_POWER, "Team 2 Minion 1", team2_personality, TEAM2_MINION_1_INSTRUCTIONS)
+        self.team2_minion_2 = Minion(2, self.game_state.team2_minion_2_pos, TEAM2_MINION_2_POWER, "Team 2 Minion 2", team2_personality, TEAM2_MINION_2_INSTRUCTIONS)
                 
         # Add this line to initialize the new attribute for the live frame
         self.live_pygame_frame_surface = None
@@ -399,10 +399,11 @@ class Game:
             self.team2_minion_2.receive_gesture(gesture)
                 
     def process_simultaneous_moves(self, decision_team1_1, decision_team1_2, decision_team2_1, decision_team2_2):
-        """Process moves for both teams, handle collisions, and update game state."""
+        """Process moves for all teams, handle collisions based on power, and update game state."""
         if self.game_state.game_over:
             return
 
+        # Extract decisions
         move_action_team1_1 = decision_team1_1.get("move", "stay")
         dialogue_team1_1 = decision_team1_1.get("dialogue", "...")
         thought_team1_1 = decision_team1_1.get("thought", "...")
@@ -419,99 +420,95 @@ class Game:
         dialogue_team2_2 = decision_team2_2.get("dialogue", "...")
         thought_team2_2 = decision_team2_2.get("thought", "...")
 
-        # Store last moves and UI dialogues/thoughts
-        self.team1_1_last_move = move_action_team1_1
-        self.ui_manager.team1_minion_1_dialogue += dialogue_team1_1
-        self.ui_manager.team1_minion_1_thought += thought_team1_1
-
-        self.team1_2_last_move = move_action_team1_2
-        self.ui_manager.team1_minion_2_dialogue += dialogue_team1_2
-        self.ui_manager.team1_minion_2_thought += thought_team1_2
-
-        self.team2_1_last_move = move_action_team2_1
-        self.ui_manager.team2_minion_1_dialogue += dialogue_team2_1
-        self.ui_manager.team2_minion_1_thought += thought_team2_1
-
-        self.team2_2_last_move = move_action_team2_2
-        self.ui_manager.team2_minion_2_dialogue += dialogue_team2_2
-        self.ui_manager.team2_minion_2_thought += thought_team2_2
-        
-        # Get current positions (these are lists, so .copy() is important for calculate_new_position)
-        pos_team1_1_current = self.game_state.team1_minion_1_pos
-        pos_team1_2_current = self.game_state.team1_minion_2_pos
-        pos_team2_1_current = self.game_state.team2_minion_1_pos
-        pos_team2_2_current = self.game_state.team2_minion_2_pos
+        # Store original current positions (copies)
+        orig_pos_t1m1 = self.game_state.team1_minion_1_pos[:]
+        orig_pos_t1m2 = self.game_state.team1_minion_2_pos[:]
+        orig_pos_t2m1 = self.game_state.team2_minion_1_pos[:]
+        orig_pos_t2m2 = self.game_state.team2_minion_2_pos[:]
 
         # Calculate tentative new positions
-        new_pos_team1_1 = self.game_state.calculate_new_position(pos_team1_1_current.copy(), move_action_team1_1)
-        new_pos_team1_2 = self.game_state.calculate_new_position(pos_team1_2_current.copy(), move_action_team1_2)
-        new_pos_team2_1 = self.game_state.calculate_new_position(pos_team2_1_current.copy(), move_action_team2_1)
-        new_pos_team2_2 = self.game_state.calculate_new_position(pos_team2_2_current.copy(), move_action_team2_2)
+        new_pos_team1_1 = self.game_state.calculate_new_position(orig_pos_t1m1[:], move_action_team1_1)
+        new_pos_team1_2 = self.game_state.calculate_new_position(orig_pos_t1m2[:], move_action_team1_2)
+        new_pos_team2_1 = self.game_state.calculate_new_position(orig_pos_t2m1[:], move_action_team2_1)
+        new_pos_team2_2 = self.game_state.calculate_new_position(orig_pos_t2m2[:], move_action_team2_2)
 
-        # Handle collisions: if minions land on the same spot
-        if new_pos_team1_1 == new_pos_team1_2:
-            kicked_minion_team = random.choice([1, 2])
-            original_collided_pos_info = f" (Collided at {new_pos_team1_1})" # For dialogue
-            if kicked_minion_team == 1:
-                new_pos_team1 = self.game_state.TEAM1_SPAWN_POS[:] # Use a copy
-                self.ui_manager.team1_dialogue += f"{original_collided_pos_info} Kicked back!"
-            else: # kicked_minion_team == 2
-                new_pos_team2 = self.game_state.TEAM2_SPAWN_POS[:] # Use a copy
-                self.ui_manager.team2_dialogue += f"{original_collided_pos_info} Kicked back!"
-        
-        # Clear old minion positions on the grid.
-        # This assumes the spot becomes empty (0). Item collection should have already updated the grid if an item was there.
-        if 0 <= pos_team1_1_current[0] < GRID_HEIGHT and 0 <= pos_team1_1_current[1] < GRID_WIDTH:
-            if self.game_state.grid[pos_team1_1_current[0]][pos_team1_1_current[1]] == TEAM1_MINION_1: # Minion 1 marker
-                self.game_state.grid[pos_team1_1_current[0]][pos_team1_1_current[1]] = 0
-        
-        if 0 <= pos_team1_2_current[0] < GRID_HEIGHT and 0 <= pos_team1_2_current[1] < GRID_WIDTH:
-            if self.game_state.grid[pos_team1_2_current[0]][pos_team1_2_current[1]] == TEAM1_MINION_2: # Minion 2 marker
-                self.game_state.grid[pos_team1_2_current[0]][pos_team1_2_current[1]] = 0
+        minions_status = [
+            {"id": 1, "minion_obj": self.team1_minion_1, "intended_pos": new_pos_team1_1[:], "spawn_pos": self.game_state.TEAM1_1_SPAWN_POS[:], "final_pos": new_pos_team1_1[:], "marker": TEAM1_MINION_1, "gs_pos_attr": "team1_minion_1_pos", "collected_list": self.game_state.team1_collected, "guide_obj": self.team1_guide, "last_move_attr": "team1_1_last_move", "move_action": move_action_team1_1, "dialogue": dialogue_team1_1, "thought": thought_team1_1, "ui_dialogue_attr": "team1_minion_1_dialogue", "ui_thought_attr": "team1_minion_1_thought"},
+            {"id": 2, "minion_obj": self.team1_minion_2, "intended_pos": new_pos_team1_2[:], "spawn_pos": self.game_state.TEAM1_2_SPAWN_POS[:], "final_pos": new_pos_team1_2[:], "marker": TEAM1_MINION_2, "gs_pos_attr": "team1_minion_2_pos", "collected_list": self.game_state.team1_collected, "guide_obj": self.team1_guide, "last_move_attr": "team1_2_last_move", "move_action": move_action_team1_2, "dialogue": dialogue_team1_2, "thought": thought_team1_2, "ui_dialogue_attr": "team1_minion_2_dialogue", "ui_thought_attr": "team1_minion_2_thought"},
+            {"id": 3, "minion_obj": self.team2_minion_1, "intended_pos": new_pos_team2_1[:], "spawn_pos": self.game_state.TEAM2_1_SPAWN_POS[:], "final_pos": new_pos_team2_1[:], "marker": TEAM2_MINION_1, "gs_pos_attr": "team2_minion_1_pos", "collected_list": self.game_state.team2_collected, "guide_obj": self.team2_guide, "last_move_attr": "team2_1_last_move", "move_action": move_action_team2_1, "dialogue": dialogue_team2_1, "thought": thought_team2_1, "ui_dialogue_attr": "team2_minion_1_dialogue", "ui_thought_attr": "team2_minion_1_thought"},
+            {"id": 4, "minion_obj": self.team2_minion_2, "intended_pos": new_pos_team2_2[:], "spawn_pos": self.game_state.TEAM2_2_SPAWN_POS[:], "final_pos": new_pos_team2_2[:], "marker": TEAM2_MINION_2, "gs_pos_attr": "team2_minion_2_pos", "collected_list": self.game_state.team2_collected, "guide_obj": self.team2_guide, "last_move_attr": "team2_2_last_move", "move_action": move_action_team2_2, "dialogue": dialogue_team2_2, "thought": thought_team2_2, "ui_dialogue_attr": "team2_minion_2_dialogue", "ui_thought_attr": "team2_minion_2_thought"},
+        ]
 
-        if 0 <= pos_team2_1_current[0] < GRID_HEIGHT and 0 <= pos_team2_1_current[1] < GRID_WIDTH:
-            if self.game_state.grid[pos_team2_1_current[0]][pos_team2_1_current[1]] == TEAM2_MINION_1: # Minion 2 marker
-                self.game_state.grid[pos_team2_1_current[0]][pos_team2_1_current[1]] = 0
+        for data in minions_status:
+            setattr(self, data["last_move_attr"], data["move_action"])
+            current_dialogue = getattr(self.ui_manager, data["ui_dialogue_attr"], "")
+            setattr(self.ui_manager, data["ui_dialogue_attr"], current_dialogue + data["dialogue"]) # Append new dialogue
+            current_thought = getattr(self.ui_manager, data["ui_thought_attr"], "")
+            setattr(self.ui_manager, data["ui_thought_attr"], current_thought + data["thought"]) # Append new thought
 
-        if 0 <= pos_team2_2_current[0] < GRID_HEIGHT and 0 <= pos_team2_2_current[1] < GRID_WIDTH:
-            if self.game_state.grid[pos_team2_2_current[0]][pos_team2_2_current[1]] == TEAM2_MINION_2: # Minion 2 marker
-                self.game_state.grid[pos_team2_2_current[0]][pos_team2_2_current[1]] = 0
+        positions_map = {}
+        for i, data in enumerate(minions_status):
+            pos_tuple = tuple(data["intended_pos"])
+            if pos_tuple not in positions_map:
+                positions_map[pos_tuple] = []
+            positions_map[pos_tuple].append(i)
+
+        bumped_minion_indices = set()
+        for pos_tuple, m_indices in positions_map.items():
+            if len(m_indices) > 1:
+                colliding_minions_data_indexed = [(idx, minions_status[idx]) for idx in m_indices]
+                random.shuffle(colliding_minions_data_indexed)
+                colliding_minions_data_indexed.sort(key=lambda item: item[1]["minion_obj"].power, reverse=True)
+                
+                for i in range(1, len(colliding_minions_data_indexed)):
+                    loser_idx, loser_data = colliding_minions_data_indexed[i]
+                    bumped_minion_indices.add(loser_idx)
+                    collided_at_info = f" (Collided at {list(pos_tuple)})"
+                    current_dialogue = getattr(self.ui_manager, loser_data["ui_dialogue_attr"], "")
+                    setattr(self.ui_manager, loser_data["ui_dialogue_attr"], current_dialogue + f"{collided_at_info} Lost contest, bumped!")
+
+        resolved_final_positions_for_others = []
+        for i, data in enumerate(minions_status):
+            if i not in bumped_minion_indices:
+                resolved_final_positions_for_others.append(data["final_pos"][:])
         
-        # Update state for Team 1
-        self.game_state.check_item_collection(new_pos_team1_1, self.game_state.team1_collected)
-        self.game_state.team1_minion_1_pos = new_pos_team1_1 # Update state tracking
-        self.team1_minion_1.grid_pos = new_pos_team1_1      # Update minion object's internal position
+        sorted_bumped_indices = sorted(list(bumped_minion_indices), key=lambda idx: minions_status[idx]["id"])
+
+        for loser_idx in sorted_bumped_indices:
+            loser_data = minions_status[loser_idx]
+            grid_snapshot_for_bump = self.game_state.grid # Pass current grid state
+            
+            new_fallback_pos = self.game_state.find_available_spawn_or_adjacent(
+                loser_data["spawn_pos"],
+                grid_snapshot_for_bump, 
+                resolved_final_positions_for_others 
+            )
+            loser_data["final_pos"] = new_fallback_pos[:]
+            resolved_final_positions_for_others.append(new_fallback_pos[:]) # Add to list for subsequent bumped minions
+
+        original_minion_positions_markers = [
+            (orig_pos_t1m1, TEAM1_MINION_1), (orig_pos_t1m2, TEAM1_MINION_2),
+            (orig_pos_t2m1, TEAM2_MINION_1), (orig_pos_t2m2, TEAM2_MINION_2),
+        ]
+        for pos, marker_val in original_minion_positions_markers:
+            if 0 <= pos[0] < GRID_HEIGHT and 0 <= pos[1] < GRID_WIDTH:
+                if self.game_state.grid[pos[0]][pos[1]] == marker_val:
+                    self.game_state.grid[pos[0]][pos[1]] = EMPTY
+        
+        for data in minions_status:
+            final_pos = data["final_pos"]
+            self.game_state.check_item_collection(final_pos, data["collected_list"])
+            setattr(self.game_state, data["gs_pos_attr"], final_pos[:])
+            data["minion_obj"].grid_pos = final_pos[:]
+            if 0 <= final_pos[0] < GRID_HEIGHT and 0 <= final_pos[1] < GRID_WIDTH:
+                self.game_state.grid[final_pos[0]][final_pos[1]] = data["marker"]
+
         self.team1_guide.update_collected(self.game_state.team1_collected)
-        if 0 <= new_pos_team1_1[0] < GRID_HEIGHT and 0 <= new_pos_team1_1[1] < GRID_WIDTH:
-            self.game_state.grid[new_pos_team1_1[0]][new_pos_team1_1[1]] = TEAM1_MINION_1 # Place Minion 1 marker
-        
-        self.game_state.check_item_collection(new_pos_team1_2, self.game_state.team1_collected)
-        self.game_state.team1_minion_2_pos = new_pos_team1_2 # Update state tracking
-        self.team1_minion_2.grid_pos = new_pos_team1_2      # Update minion object's internal position
-        self.team1_guide.update_collected(self.game_state.team1_collected)
-        if 0 <= new_pos_team1_2[0] < GRID_HEIGHT and 0 <= new_pos_team1_2[1] < GRID_WIDTH:
-            self.game_state.grid[new_pos_team1_2[0]][new_pos_team1_2[1]] = TEAM1_MINION_2 # Place Minion 2 marker
-
-        # Update state for Team 2
-        self.game_state.check_item_collection(new_pos_team2_1, self.game_state.team2_collected)
-        self.game_state.team2_minion_1_pos = new_pos_team2_1 # Update state tracking
-        self.team2_minion_1.grid_pos = new_pos_team2_1      # Update minion object's internal position
         self.team2_guide.update_collected(self.game_state.team2_collected)
-        if 0 <= new_pos_team2_1[0] < GRID_HEIGHT and 0 <= new_pos_team2_1[1] < GRID_WIDTH:
-            self.game_state.grid[new_pos_team2_1[0]][new_pos_team2_1[1]] = TEAM2_MINION_1 # Place Minion 1 marker
 
-        self.game_state.check_item_collection(new_pos_team2_2, self.game_state.team2_collected)
-        self.game_state.team2_minion_2_pos = new_pos_team2_2 # Update state tracking
-        self.team2_minion_2.grid_pos = new_pos_team2_2      # Update minion object's internal position
-        self.team2_guide.update_collected(self.game_state.team2_collected)
-        if 0 <= new_pos_team2_2[0] < GRID_HEIGHT and 0 <= new_pos_team2_2[1] < GRID_WIDTH:
-            self.game_state.grid[new_pos_team2_2[0]][new_pos_team2_2[1]] = TEAM2_MINION_2 # Place Minion 2 marker
-
-        # Check win conditions (this might need to handle simultaneous wins if applicable)
         self.game_state.check_win_conditions()
-        
-        # Move to next turn/round (increments turn counter, etc.)
-        self.game_state.next_turn()
+        if not self.game_state.game_over:
+             self.game_state.next_turn()
 
     def query_openai(self, frame_rgb):
         """Send the captured frame to the gesture recognizer and process the result"""

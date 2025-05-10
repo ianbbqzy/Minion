@@ -16,9 +16,9 @@ class GameState:
         self.grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
         
         # Define spawn positions
-        self.TEAM1_1_SPAWN_POS = [0, 0]
+        self.TEAM1_1_SPAWN_POS = [5, 5]
         self.TEAM1_2_SPAWN_POS = [0, 3]
-        self.TEAM2_1_SPAWN_POS = [GRID_HEIGHT - 1, GRID_WIDTH - 1]
+        self.TEAM2_1_SPAWN_POS = [4, 5]
         self.TEAM2_2_SPAWN_POS = [GRID_HEIGHT - 1, GRID_WIDTH - 3]
 
         self.team1_minion_1_pos = self.TEAM1_1_SPAWN_POS
@@ -140,6 +140,47 @@ class GameState:
             if self.winner is None:
                 self.winner = 0  # Draw
     
+    def find_available_spawn_or_adjacent(self, base_spawn_pos, grid, occupied_by_others_this_turn):
+        """
+        Finds an available position for a bumped minion.
+        Priority:
+        1. base_spawn_pos if not taken by another minion this turn.
+        2. An empty adjacent cell if not taken by another minion this turn.
+        3. base_spawn_pos as a last resort.
+        Args:
+            base_spawn_pos: The primary position to check (e.g., minion's spawn point). List [y,x].
+            grid: The current game grid (numpy array) - state before current turn's moves.
+            occupied_by_others_this_turn: A list of [y, x] positions (lists) that other minions
+                                           will definitively occupy in the current turn resolution.
+        Returns:
+            An available [y, x] position (list).
+        """
+        base_spawn_pos_tuple = tuple(base_spawn_pos)
+        is_base_spawn_occupied_by_other = any(base_spawn_pos_tuple == tuple(occ_pos) for occ_pos in occupied_by_others_this_turn)
+
+        if not is_base_spawn_occupied_by_other:
+            return base_spawn_pos[:] # Return a copy
+
+        # If base_spawn_pos is occupied by another, try adjacent cells
+        adj_diffs = [(0, 1), (0, -1), (1, 0), (-1, 0)] # Right, Left, Down, Up
+        random.shuffle(adj_diffs) 
+
+        for dr, dc in adj_diffs:
+            adj_pos_y, adj_pos_x = base_spawn_pos[0] + dr, base_spawn_pos[1] + dc
+            
+            if 0 <= adj_pos_y < GRID_HEIGHT and 0 <= adj_pos_x < GRID_WIDTH:
+                adj_pos = [adj_pos_y, adj_pos_x]
+                adj_pos_tuple = tuple(adj_pos)
+                is_adj_occupied_by_other = any(adj_pos_tuple == tuple(occ_pos) for occ_pos in occupied_by_others_this_turn)
+                
+                # Check if the grid cell is EMPTY and not occupied by another minion
+                if grid[adj_pos_y][adj_pos_x] == EMPTY and not is_adj_occupied_by_other:
+                    return adj_pos 
+        
+        # Fallback: if spawn is taken AND no empty, non-taken adjacent spot is found
+        print(f"Warning: Minion bumped to {base_spawn_pos}, which was occupied by another winner, and no suitable adjacent empty cell found. Defaulting to {base_spawn_pos}.")
+        return base_spawn_pos[:] # Return a copy
+
     def next_turn(self):
         """Move to the next turn"""
         # Switch teams
