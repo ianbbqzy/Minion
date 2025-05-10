@@ -33,34 +33,30 @@ class EventHandler:
     
     def handle_mouse_motion(self, pos):
         """Handle mouse motion events"""
-        # Update AI button hover state
-        self.game.ai_button.update(pos)
+        # No need to update button states here as UIManager handles it in its update method
+        pass
                 
     def handle_mouse_click(self, pos):
         """Handle mouse clicks"""
         # Check if AI button was clicked
-        if self.game.ai_button.is_clicked(pos):
-            # Skip AI thinking time if already thinking
-            if self.game.ai_thinking:
-                self.game.ai_thinking_time = self.game.ai_thinking_max_time
-            else:
+        if self.game.ui_manager.is_ai_button_clicked(pos):
+            # Only start AI turn if not already thinking
+            if not self.game.ai_thinking:
                 # Take an AI turn
                 self.game.start_ai_turn()
         
         # Check if webcam button was clicked
-        elif self.game.webcam_button.is_clicked(pos) and self.game.webcam_display.last_frame is not None:
+        elif self.game.ui_manager.is_webcam_button_clicked(pos) and self.game.ui_manager.webcam_display.last_frame is not None:
             # Send the cached frame to OpenAI
             pygame.event.set_blocked(pygame.MOUSEBUTTONDOWN)  # avoid double-click spam
-            self.game.query_openai(self.game.webcam_display.last_frame.copy())
+            self.game.query_openai(self.game.ui_manager.webcam_display.last_frame.copy())
             pygame.event.set_allowed(pygame.MOUSEBUTTONDOWN)
     
     def handle_keydown(self, key):
         """Handle key presses"""
         if key == pygame.K_SPACE:
-            # Skip AI thinking time if already thinking
-            if self.game.ai_thinking:
-                self.game.ai_thinking_time = self.game.ai_thinking_max_time
-            else:
+            # Only start AI turn if not already thinking
+            if not self.game.ai_thinking:
                 # Take an AI turn
                 self.game.start_ai_turn()
         elif key == pygame.K_r:

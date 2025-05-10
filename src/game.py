@@ -12,12 +12,13 @@ import asyncio, threading
 from src.utils.constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, GRID_WIDTH, GRID_HEIGHT,
     WEBCAM_WIDTH, WEBCAM_HEIGHT, PREVIEW_GAP, BLACK, WHITE,
-    BUTTON_COLOR, BUTTON_HOVER_COLOR
+    BUTTON_COLOR, BUTTON_HOVER_COLOR, GRADIENT_COLORS
 )
 from src.utils.game_state import GameState
 from src.rendering.sprites import SpriteManager
-from src.rendering.ui import Button, DialogueBox, WebcamDisplay
+from src.rendering.ui import DialogueBox, WebcamDisplay
 from src.rendering.board import BoardRenderer
+from src.rendering.ui_manager import UIManager
 from src.input.event_handler import EventHandler
 from src.ai.gesture_recognition import GestureRecognizer
 from src.entities.minion import Minion
@@ -43,9 +44,9 @@ class Game:
         self.thought_font = pygame.font.SysFont('Arial', 18, italic=True)
         self.btn_font = pygame.font.SysFont(None, 24)
         
-        # Calculate board position to center it
-        self.BOARD_X = (SCREEN_WIDTH - (GRID_WIDTH * TILE_SIZE) - 400) // 2
-        self.BOARD_Y = (SCREEN_HEIGHT - (GRID_HEIGHT * TILE_SIZE) - 400) // 2
+        # Calculate board position to center it (will be used by board renderer and UI manager)
+        self.BOARD_X = (SCREEN_WIDTH - (GRID_WIDTH * TILE_SIZE)) // 2
+        self.BOARD_Y = 50  # Top padding
         
         # Initialize components
         self.initialize_components()
@@ -64,6 +65,10 @@ class Game:
         # Dialogue and gesture displays
         self.current_gesture = ""
         
+        # Team panel data
+        self.team1_last_move = ""
+        self.team2_last_move = ""
+        
         # Main loop control
         self.running = True
 
@@ -71,7 +76,7 @@ class Game:
         threading.Thread(target=self.async_loop.run_forever, daemon=True).start()
         
     def initialize_components(self):
-        """Initialize UI and rendering components"""
+        """Initialize game components"""
         # Create sprite manager
         self.sprites = SpriteManager(TILE_SIZE)
         
@@ -82,45 +87,14 @@ class Game:
             TILE_SIZE, self.sprites
         )
         
-        # Create dialogue box
-        self.dialogue_box = DialogueBox(self.font, self.thought_font)
+        # Create UI manager to handle all UI components and layout
+        self.ui_manager = UIManager(self)
         
-        # Create AI button
-        self.ai_button_rect = pygame.Rect(20, 20, 200, 60)
-        self.ai_button = Button(
-            self.ai_button_rect,
-            "Take AI Turn",
-            self.btn_font
-        )
-
         # Webcam settings
         self.webcam = None
         self.webcam_available = False
         self.init_webcam()
-    
-        # Center horizontally, place at bottom with some margin
-        bottom_margin = 50
-        left_shift = 300
-        webcam_x = (SCREEN_WIDTH - WEBCAM_WIDTH) // 2 - left_shift
-        webcam_y = SCREEN_HEIGHT - WEBCAM_HEIGHT - bottom_margin
-
-        self.webcam_display = WebcamDisplay(
-            webcam_x,
-            webcam_y,
-            WEBCAM_WIDTH, 
-            WEBCAM_HEIGHT,
-            self.btn_font
-        )
-        
-        # Webcam button
-        btn_x = self.ai_button_rect.x
-        btn_y = self.ai_button_rect.y + self.ai_button_rect.height + 10  # Place just below AI button
-        self.webcam_button = Button(
-            pygame.Rect(btn_x, btn_y, 200, 60),
-            "Query with Camera",
-            self.btn_font
-        )
-        
+            
         # Gesture recognizer
         self.gesture_recognizer = GestureRecognizer()
         
@@ -185,9 +159,13 @@ class Game:
         self.team2_minion.grid_pos = self.game_state.team2_minion_pos
         
         # Reset dialogue and gestures
-        self.dialogue_box.dialogue = ""
-        self.dialogue_box.thought = ""
+        self.ui_manager.dialogue_box.dialogue = ""
+        self.ui_manager.dialogue_box.thought = ""
         self.current_gesture = ""
+        
+        # Reset team move info
+        self.team1_last_move = ""
+        self.team2_last_move = ""
         
         # Reset AI turn controls
         self.ai_thinking = False
@@ -209,19 +187,17 @@ class Game:
         current_time = pygame.time.get_ticks()
         
         # Update dialogue display
-        self.dialogue_box.update()
+        self.ui_manager.dialogue_box.update()
         
         # AI is thinking if the flag is set (thread is running)
         if self.ai_thinking:
             self.ai_thinking_time += self.clock.get_time()
-            # The "Thinking..." text will be displayed based on this flag.
-            # No actual decision logic here anymore.
         
         # Check if the AI thread has finished and populated pending_move
         if self.pending_move is not None:
-            self.take_turn(self.pending_move) # This method will also set self.ai_thinking = False
-            self.pending_move = None # Clear the pending move after processing
-            self.ai_thinking = False # Reset the thinking flag
+            self.take_turn(self.pending_move)
+            self.pending_move = None
+            self.ai_thinking = False
         
         # Update webcam frame
         if self.webcam_available:
@@ -234,93 +210,40 @@ class Game:
                 # Store the pygame surface for drawing
                 self.live_pygame_frame_surface = frame_surface
                 # Save raw CV2 frame for API (GestureRecognizer expects this format)
-                self.webcam_display.last_frame = frame
+                self.ui_manager.webcam_display.last_frame = frame
             else:
                 # Indicate no current frame available for drawing
                 self.live_pygame_frame_surface = None
         else:
             # Indicate no current frame available for drawing
             self.live_pygame_frame_surface = None
+            
+        # Update UI manager - no longer passing dialogue/thought as they're set directly in take_turn
+        self.ui_manager.update(
+            self.game_state, 
+            "", # Empty dialogue, not used anymore
+            "", # Empty thought, not used anymore
+            self.team1_last_move, 
+            self.team2_last_move, 
+            self.game_state.current_team,
+            self.live_pygame_frame_surface,
+            self.webcam_available,
+            self.ai_thinking
+        )
     
     def draw(self):
         """Render the game"""
-        # Clear the screen
-        self.screen.fill(BLACK)
-        
-        # Draw AI button
-        self.ai_button.draw(self.screen)
-        
-        # Draw the live webcam feed or a placeholder
-        if self.live_pygame_frame_surface:
-            self.webcam_display.draw_camera_feed(self.screen, self.live_pygame_frame_surface)
-        elif self.webcam_available: # Camera is supposed to be available but no frame / error
-            self.webcam_display.draw_placeholder(self.screen, "Camera Error")
-        else: # Camera is not available
-            self.webcam_display.draw_placeholder(self.screen, "No Camera")
-        
-        # Draw webcam button
-        self.webcam_button.draw(self.screen)
-        
-        self.webcam_display.draw_preview(self.screen)
+        # Draw UI components (background, panels, buttons, webcam)
+        self.ui_manager.draw(
+            self.screen, 
+            self.game_state, 
+            self.live_pygame_frame_surface, 
+            self.webcam_available, 
+            self.ai_thinking
+        )
         
         # Draw game board
         self.board_renderer.draw(self.screen, self.game_state.grid)
-        
-        # Draw sidebar information
-        sidebar_y = self.board_renderer.draw_sidebar(
-            self.screen, 
-            self.game_state, 
-            self.font, 
-            self.small_font
-        )
-        
-        # Draw current minion personality
-        sidebar_x = self.BOARD_X + (GRID_WIDTH * TILE_SIZE) + 20
-        sidebar_y += 20
-        
-        # Get current minion
-        if self.game_state.current_team == 1:
-            minion = self.team1_minion
-            team_color = self.sprites.sprites["team1"].get_at((TILE_SIZE//2, TILE_SIZE//2))
-        else:
-            minion = self.team2_minion
-            team_color = self.sprites.sprites["team2"].get_at((TILE_SIZE//2, TILE_SIZE//2))
-        
-        # Draw personality info
-        personality_text = self.font.render(f"Team {self.game_state.current_team} Minion Personality:", True, team_color)
-        self.screen.blit(personality_text, (sidebar_x, sidebar_y))
-        sidebar_y += 30
-        
-        style_text = self.small_font.render(f"Style: {minion.personality['style']}", True, WHITE)
-        self.screen.blit(style_text, (sidebar_x, sidebar_y))
-        sidebar_y += 25
-        
-        intel_text = self.small_font.render(f"Intelligence: {minion.personality['intelligence']}/5", True, WHITE)
-        self.screen.blit(intel_text, (sidebar_x, sidebar_y))
-        sidebar_y += 25
-        
-        obedience_text = self.small_font.render(f"Obedience: {minion.personality['propensity_to_listen']:.1f}", True, WHITE)
-        self.screen.blit(obedience_text, (sidebar_x, sidebar_y))
-        sidebar_y += 40
-        
-        # Draw current gesture
-        if self.current_gesture:
-            gesture_text = self.font.render("Current Gesture:", True, (255, 255, 0))
-            self.screen.blit(gesture_text, (sidebar_x, sidebar_y))
-            sidebar_y += 30
-            
-            gesture_render = self.font.render(self.current_gesture, True, (255, 255, 0))
-            self.screen.blit(gesture_render, (sidebar_x, sidebar_y))
-        
-        # Draw AI thinking indicator
-        if self.ai_thinking:
-            thinking_text = self.font.render("Thinking...", True, WHITE)
-            thinking_rect = thinking_text.get_rect(center=(SCREEN_WIDTH//2, self.BOARD_Y - 30))
-            self.screen.blit(thinking_text, thinking_rect)
-        
-        # Draw dialogue bubble
-        minion_pos = self.game_state.team1_minion_pos if self.game_state.current_team == 1 else self.game_state.team2_minion_pos
-        self.dialogue_box.draw(self.screen, minion_pos, self.BOARD_X, self.BOARD_Y, TILE_SIZE)
         
         # Draw game over screen if needed
         if self.game_state.game_over:
@@ -422,15 +345,25 @@ class Game:
         move_action = ai_decision_data.get("move", "stay")
         dialogue = ai_decision_data.get("dialogue", "...")
         thought = ai_decision_data.get("thought", "...")
-        # strategy = ai_decision_data.get("strategy") # Optional: if you want to use it
-
-        self.dialogue_box.set_dialogue(dialogue, thought)
+        
+        # Store the move, dialogue and thought directly in UI manager for the correct team
+        if self.game_state.current_team == 1:
+            self.team1_last_move = move_action
+            self.ui_manager.team1_dialogue = dialogue  # Set team-specific dialogue directly
+            self.ui_manager.team1_thought = thought    # Set team-specific thought directly
+        else:
+            self.team2_last_move = move_action
+            self.ui_manager.team2_dialogue = dialogue  # Set team-specific dialogue directly
+            self.ui_manager.team2_thought = thought    # Set team-specific thought directly
+        
+        # Set dialogue box for overlay/compatibility
+        self.ui_manager.dialogue_box.set_dialogue(dialogue, thought)
         
         current_minion_game_pos = None
         current_minion_collected_items = None
         current_minion_object = None
         current_guide_object = None
-
+        
         if self.game_state.current_team == 1:
             current_minion_game_pos = self.game_state.team1_minion_pos
             current_minion_collected_items = self.game_state.team1_collected
@@ -466,19 +399,15 @@ class Game:
     def query_openai(self, frame_rgb):
         """Send the captured frame to the gesture recognizer and process the result"""
         # Create a preview of the captured frame
-        # Note: frame_rgb is already self.webcam_display.last_frame.copy()
-        # The .copy() inside capture_frame call is self.game.webcam_display.last_frame.copy().copy()
-        preview_surface = self.gesture_recognizer.capture_frame(frame_rgb.copy()) # Using frame_rgb directly as it's already a copy
+        webcam_display = self.ui_manager.get_webcam_display()
+        preview_surface = self.gesture_recognizer.capture_frame(frame_rgb.copy())
         
         if preview_surface is None:
             print("Error: Could not create preview surface for AI query in Game.query_openai.")
-            self.webcam_display.set_captured_preview(None) # Ensure old preview is cleared
-            # Optionally, you could set a message to display in the UI about the error
-            # For example, if you add a self.gesture_text to the Game class:
-            # self.gesture_text = "Error processing frame"
+            webcam_display.set_captured_preview(None)
             return
 
-        self.webcam_display.set_captured_preview(preview_surface)
+        webcam_display.set_captured_preview(preview_surface)
         
         # Analyze the gesture
         future = asyncio.run_coroutine_threadsafe(
@@ -486,6 +415,3 @@ class Game:
 
         future.add_done_callback(
         lambda f: print("Detect gesture:", f.result()))
-        
-        # You can add custom handling of the gesture here
-        # For example, mapping gestures to in-game actions

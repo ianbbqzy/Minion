@@ -3,13 +3,13 @@ Game constants used throughout the application
 """
 
 # Screen dimensions
-SCREEN_WIDTH = 1920
-SCREEN_HEIGHT = 1080
+SCREEN_WIDTH = 1700
+SCREEN_HEIGHT = 1000
 
 # Game grid settings
-TILE_SIZE = 60
-GRID_WIDTH = 8
-GRID_HEIGHT = 10
+TILE_SIZE = 80
+GRID_WIDTH = 10
+GRID_HEIGHT = 8
 
 # Webcam settings
 WEBCAM_WIDTH = 400
@@ -27,6 +27,14 @@ YELLOW = (255, 255, 0)
 SPEECH_BG = (50, 50, 50, 180)  # Semi-transparent dark gray
 BUTTON_COLOR = (70, 130, 180)  # Steel blue
 BUTTON_HOVER_COLOR = (100, 160, 210)  # Lighter blue for hover
+
+# Background gradient colors
+GRADIENT_COLORS = [
+    (204, 255, 204),  # Pastel Green
+    (230, 255, 204),  # Very light pastel green
+    (255, 255, 204),  # Pastel Yellow
+    (255, 250, 230)   # Pale cream / off-white
+]
 
 # Tile colors
 TILE_COLORS = {

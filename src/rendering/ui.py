@@ -2,7 +2,35 @@
 UI components for the game
 """
 import pygame
-from src.utils.constants import WHITE, BUTTON_COLOR, BUTTON_HOVER_COLOR, PREVIEW_GAP, SPEECH_BG
+import numpy as np
+from src.utils.constants import WHITE, BLACK, BUTTON_COLOR, BUTTON_HOVER_COLOR, PREVIEW_GAP, SPEECH_BG, SCREEN_WIDTH, SCREEN_HEIGHT
+
+def create_gradient_background(colors, height=SCREEN_HEIGHT):
+    """Create a vertical gradient background with the given colors"""
+    surface = pygame.Surface((SCREEN_WIDTH, height))
+    
+    # Calculate the height of each color segment
+    segment_height = height / (len(colors) - 1)
+    
+    for i in range(len(colors) - 1):
+        start_color = colors[i]
+        end_color = colors[i+1]
+        start_y = int(i * segment_height)
+        end_y = int((i + 1) * segment_height)
+        
+        # Draw gradient lines
+        for y in range(start_y, end_y):
+            # Calculate interpolation factor
+            factor = (y - start_y) / segment_height
+            
+            # Interpolate between colors
+            r = int(start_color[0] + (end_color[0] - start_color[0]) * factor)
+            g = int(start_color[1] + (end_color[1] - start_color[1]) * factor)
+            b = int(start_color[2] + (end_color[2] - start_color[2]) * factor)
+            
+            pygame.draw.line(surface, (r, g, b), (0, y), (SCREEN_WIDTH, y))
+    
+    return surface
 
 class Button:
     def __init__(self, rect, text, font, color=BUTTON_COLOR, hover_color=BUTTON_HOVER_COLOR):
@@ -138,3 +166,152 @@ class WebcamDisplay:
     def set_captured_preview(self, surface):
         """Set the preview of the captured frame"""
         self.captured_preview = surface 
+
+class TeamView:
+    """A modern UI component that displays team information in a Tailwind-like style"""
+    def __init__(self, team_id, x, y, width, height, font_large, font_medium, font_small, sprites):
+        self.team_id = team_id
+        self.rect = pygame.Rect(x, y, width, height)
+        self.font_large = font_large
+        self.font_medium = font_medium
+        self.font_small = font_small
+        self.sprites = sprites
+        
+        # Team data
+        self.targets = []
+        self.collected = []
+        self.last_thought = ""
+        self.last_dialogue = ""
+        self.last_move = ""
+        
+        # UI colors
+        self.bg_color = (0, 0, 0, 160)  # Semi-transparent black background
+        self.text_color = WHITE
+        self.accent_color = (255, 100, 100) if team_id == 1 else (100, 100, 255)  # Red for team 1, blue for team 2
+        self.border_color = self.accent_color
+        
+    def update(self, targets, collected, thought, dialogue, move):
+        """Update the team information"""
+        self.targets = targets
+        self.collected = collected
+        self.last_thought = thought if thought else ""
+        self.last_dialogue = dialogue if dialogue else ""
+        self.last_move = move if move else ""
+        
+    def draw(self, screen):
+        """Draw the team information panel with modern UI style"""
+        # Draw main container with rounded corners
+        panel_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        pygame.draw.rect(panel_surface, self.bg_color, (0, 0, self.rect.width, self.rect.height), border_radius=10)
+        pygame.draw.rect(panel_surface, self.border_color, (0, 0, self.rect.width, self.rect.height), width=2, border_radius=10)
+        
+        # Team header
+        header_text = f"Team {self.team_id}"
+        header_surf = self.font_large.render(header_text, True, self.accent_color)
+        header_rect = header_surf.get_rect(topleft=(20, 20))
+        panel_surface.blit(header_surf, header_rect)
+        
+        # Content y position tracker
+        y_pos = header_rect.bottom + 15
+        
+        # Targets section
+        section_title = self.font_medium.render("Targets", True, self.text_color)
+        panel_surface.blit(section_title, (20, y_pos))
+        y_pos += section_title.get_height() + 10
+        
+        # Draw target sprites horizontally
+        sprite_size = 40
+        sprite_gap = 5
+        for i, target in enumerate(self.targets):
+            sprite_name = ["", "sushi", "donut", "banana"][target]
+            if sprite_name and sprite_name in self.sprites.sprites:
+                sprite = pygame.transform.scale(self.sprites.sprites[sprite_name], (sprite_size, sprite_size))
+                panel_surface.blit(sprite, (20 + i * (sprite_size + sprite_gap), y_pos))
+        
+        y_pos += sprite_size + 20
+        
+        # Collected items section
+        section_title = self.font_medium.render("Collected", True, self.text_color)
+        panel_surface.blit(section_title, (20, y_pos))
+        y_pos += section_title.get_height() + 10
+        
+        # Draw collected sprites in a grid (4 per row)
+        items_per_row = 4
+        for i, item in enumerate(self.collected):
+            sprite_name = ["", "sushi", "donut", "banana"][item]
+            if sprite_name and sprite_name in self.sprites.sprites:
+                row = i // items_per_row
+                col = i % items_per_row
+                sprite = pygame.transform.scale(self.sprites.sprites[sprite_name], (sprite_size, sprite_size))
+                panel_surface.blit(sprite, (20 + col * (sprite_size + sprite_gap), y_pos + row * (sprite_size + sprite_gap)))
+        
+        # Calculate height based on number of collected items
+        collected_rows = max(1, (len(self.collected) + items_per_row - 1) // items_per_row)
+        y_pos += (collected_rows * (sprite_size + sprite_gap)) + 20
+        
+        # Last move section - only if we have a move
+        if self.last_move:
+            section_title = self.font_medium.render("Last Move", True, self.text_color)
+            panel_surface.blit(section_title, (20, y_pos))
+            y_pos += section_title.get_height() + 5
+            
+            move_text = self.font_small.render(self.last_move, True, self.text_color)
+            panel_surface.blit(move_text, (20, y_pos))
+            y_pos += move_text.get_height() + 15
+        
+        # Dialogue section - only if we have dialogue
+        if self.last_dialogue:
+            section_title = self.font_medium.render("Dialogue", True, self.text_color)
+            panel_surface.blit(section_title, (20, y_pos))
+            y_pos += section_title.get_height() + 5
+            
+            # Wrap text to fit width
+            dialogue_lines = self._wrap_text(self.last_dialogue, self.font_small, self.rect.width - 40)
+            for line in dialogue_lines:
+                line_surf = self.font_small.render(line, True, self.text_color)
+                panel_surface.blit(line_surf, (20, y_pos))
+                y_pos += line_surf.get_height() + 2
+            
+            y_pos += 15
+        
+        # Thought section - only if we have a thought
+        if self.last_thought:
+            section_title = self.font_medium.render("Thought", True, self.text_color)
+            panel_surface.blit(section_title, (20, y_pos))
+            y_pos += section_title.get_height() + 5
+            
+            # Wrap text to fit width
+            thought_lines = self._wrap_text(self.last_thought, self.font_small, self.rect.width - 40)
+            for line in thought_lines:
+                line_surf = self.font_small.render(line, True, (180, 180, 180))  # Lighter color for thoughts
+                panel_surface.blit(line_surf, (20, y_pos))
+                y_pos += line_surf.get_height() + 2
+        
+        # Blit the panel to the screen
+        screen.blit(panel_surface, self.rect)
+    
+    def _wrap_text(self, text, font, max_width):
+        """Wrap text to fit within the given width"""
+        words = text.split(' ')
+        lines = []
+        current_line = []
+        
+        for word in words:
+            test_line = ' '.join(current_line + [word])
+            width, _ = font.size(test_line)
+            
+            if width <= max_width:
+                current_line.append(word)
+            else:
+                if current_line:
+                    lines.append(' '.join(current_line))
+                    current_line = [word]
+                else:
+                    # Word is too long, split it
+                    lines.append(word)
+                    current_line = []
+        
+        if current_line:
+            lines.append(' '.join(current_line))
+        
+        return lines 
