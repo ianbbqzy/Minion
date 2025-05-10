@@ -29,16 +29,20 @@ class GestureRecognizer:
             self.last_frame_team1 = None
             self.last_frame_team2 = None
             return None
-
-        if team == 1:
-            self.last_frame_team1 =frame_rgb
-        if team == 2:
-            self.last_frame_team2 = frame_rgb
         
         try:
             # Build the pygame surface for the thumbnail
             flipped_frame = np.flipud(frame_rgb)  # flip Y so it isn't upside-down
             captured_preview_surface = pygame.surfarray.make_surface(flipped_frame)
+            filename = f"capture_team{team}.png"            # e.g. capture_team1.png
+            # Rotate frame_rgb with  90 ° clockwise rotation
+            rotate_frame = np.rot90(frame_rgb, k=-1)
+
+            if team == 1:
+                self.last_frame_team1 = rotate_frame
+            if team == 2:
+                self.last_frame_team2 = rotate_frame
+
         except ValueError as e:
             print(f"Error processing frame in GestureRecognizer.capture_frame: {e}")
             print(f"Offending frame_rgb shape: {getattr(frame_rgb, 'shape', 'N/A')}, dtype: {getattr(frame_rgb, 'dtype', 'N/A')}, size: {getattr(frame_rgb, 'size', 'N/A')}")
@@ -84,13 +88,17 @@ class GestureRecognizer:
             if team == 2:
                 frame_bgr = cv2.cvtColor(self.last_frame_team2, cv2.COLOR_RGB2BGR)
             
+
+            filename = f"capture_team{team}.png"            # e.g. capture_team1.png
+            # flipped_frame is RGB; OpenCV expects BGR for writing
+            cv2.imwrite(filename, cv2.cvtColor(self.last_frame_team1, cv2.COLOR_RGB2BGR))
             # Encode the image as PNG
             _, png = cv2.imencode(".png", frame_bgr)
             b64_data = base64.b64encode(png.tobytes()).decode()
             
             # Call the OpenAI API
             response = await self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 max_tokens=200,  # Increased to accommodate JSON response
                 response_format={"type": "json_object"},  # Request JSON response
                 messages=[
