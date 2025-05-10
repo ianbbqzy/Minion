@@ -7,9 +7,8 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 class GameRestartHandler(FileSystemEventHandler):
-    def __init__(self, use_openai=False):
+    def __init__(self):
         self.process = None
-        self.use_openai = use_openai
         self.start_game()
         
     def start_game(self):
@@ -24,8 +23,6 @@ class GameRestartHandler(FileSystemEventHandler):
         
         # Start the game with or without OpenAI
         cmd = [sys.executable, "main.py"]
-        if self.use_openai:
-            cmd.append("--openai")
             
         self.process = subprocess.Popen(cmd)
             
@@ -47,11 +44,8 @@ class GameRestartHandler(FileSystemEventHandler):
             self.process.terminate()
             
 def main():
-    # Check if we should enable OpenAI mode
-    use_openai = "--openai" in sys.argv
-    
     # Create event handler
-    event_handler = GameRestartHandler(use_openai)
+    event_handler = GameRestartHandler()
     
     # Set up the observer to watch the source directory
     observer = Observer()
@@ -59,7 +53,6 @@ def main():
     observer.start()
     
     print(f"Auto-runner started! Watching for changes in src/ directory...")
-    print(f"OpenAI mode: {'ENABLED' if use_openai else 'DISABLED'}")
     print("Press Ctrl+C to stop")
     
     try:

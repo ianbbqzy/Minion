@@ -24,16 +24,11 @@ from src.entities.guide import Guide
 from src.ai.ai_service import AIService
 
 class Game:
-    def __init__(self, use_openai=False):
+    def __init__(self):
         # Initialize pygame
         pygame.init()
         
-        # Flag for using OpenAI
-        self.use_openai = use_openai
-        if use_openai:
-            self.ai_service = AIService()
-        else:
-            self.ai_service = None
+        self.ai_service = AIService()
         
         # Create the screen
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -172,12 +167,7 @@ class Game:
         
         self.team1_minion = Minion(1, self.game_state.team1_minion_pos, team1_personality)
         self.team2_minion = Minion(2, self.game_state.team2_minion_pos, team2_personality)
-        
-        # Set OpenAI flag for minions if needed
-        if self.use_openai:
-            self.team1_minion.use_openai = True
-            self.team2_minion.use_openai = True
-        
+                
         # Add this line to initialize the new attribute for the live frame
         self.live_pygame_frame_surface = None
         
@@ -230,14 +220,14 @@ class Game:
                         self.game_state.grid,
                         self.ai_service,
                         self.game_state.team1_collected,
-                        self.game_state.team1_targets if self.use_openai else None
+                        self.game_state.team1_targets
                     )
                 else:
                     self.pending_move = self.team2_minion.decide_move(
                         self.game_state.grid,
                         self.ai_service,
                         self.game_state.team2_collected,
-                        self.game_state.team2_targets if self.use_openai else None
+                        self.game_state.team2_targets
                     )
                     
                 # Execute the move

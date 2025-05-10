@@ -45,10 +45,7 @@ if __name__ == "__main__":
             print(".env file already exists. Use --api-key to update it.")
             sys.exit(1)
     
-    # Check for OpenAI mode
-    use_openai = args.openai
-    
-    if use_openai and not os.getenv("OPENAI_API_KEY"):
+    if not os.getenv("OPENAI_API_KEY"):
         print("Error: To use OpenAI, set your API key in one of these ways:")
         print("1. Create a .env file with OPENAI_API_KEY=your_key_here")
         print("2. Run with: python main.py --api-key your_key_here")
@@ -56,9 +53,7 @@ if __name__ == "__main__":
         print("\nTo create a template .env file, run: python main.py --create-env")
         sys.exit(1)
     
-    if use_openai:
-        print("Using OpenAI for minion decisions")
     
     # Start the game
-    game = Game(use_openai)
+    game = Game()
     game.run() 

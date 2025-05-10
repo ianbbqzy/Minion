@@ -111,7 +111,12 @@ class GameState:
         # Check if team 1 has collected all targets
         team1_matches = 0
         for item in self.team1_targets:
-            if self.team1_collected.count(item) > 0:
+            # Count how many of this item we need
+            needed = self.team1_targets.count(item)
+            # Count how many we have
+            collected = self.team1_collected.count(item)
+            # If we have enough of this item, count it as a match
+            if collected >= needed:
                 team1_matches += 1
                 
         if team1_matches >= 5:
@@ -121,7 +126,12 @@ class GameState:
         # Check if team 2 has collected all targets
         team2_matches = 0
         for item in self.team2_targets:
-            if self.team2_collected.count(item) > 0:
+            # Count how many of this item we need
+            needed = self.team2_targets.count(item)
+            # Count how many we have
+            collected = self.team2_collected.count(item)
+            # If we have enough of this item, count it as a match
+            if collected >= needed:
                 team2_matches += 1
                 
         if team2_matches >= 5:
