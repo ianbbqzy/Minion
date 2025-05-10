@@ -431,29 +431,34 @@ class Game:
         
         processed_frame_for_api = frame_rgb.copy() 
         original_width_as_rotated_height, _original_height_as_rotated_width, _channels = processed_frame_for_api.shape
-        
-        if self.game_state.current_team == 2:
-            # Player 2's turn: use left half of the original view, because the frame is flipped horizontally.
-            # This corresponds to the top half of the rows in the rotated frame.
-            processed_frame_for_api = processed_frame_for_api[:original_width_as_rotated_height // 2, :, :]
-        else:
-            # Player 1's turn: use right half of the original view, because the frame is flipped horizontally.
-            # This corresponds to the bottom half of the rows in the rotated frame.
-            processed_frame_for_api = processed_frame_for_api[original_width_as_rotated_height // 2:, :, :]
+    
             
         # Pass the correctly cropped frame to the gesture recognizer
-        preview_surface = self.gesture_recognizer.capture_frame(processed_frame_for_api)
+        preview_surface_team1 = self.gesture_recognizer.capture_frame(1, processed_frame_for_api[original_width_as_rotated_height // 2:, :, :])
+        preview_surface_team2 = self.gesture_recognizer.capture_frame(2, processed_frame_for_api[:original_width_as_rotated_height // 2, :, :])
         
-        if preview_surface is None:
+        if preview_surface_team1 is None:
             print("Error: Could not create preview surface for AI query in Game.query_openai.")
-            webcam_display.set_captured_preview(None)
+            webcam_display.set_captured_preview_team1(None)
             return
-
-        webcam_display.set_captured_preview(preview_surface)
+        
+        if preview_surface_team2 is None:
+            print("Error: Could not create preview surface for AI query in Game.query_openai.")
+            webcam_display.set_captured_preview_team2(None)
+            return
+        
+        webcam_display.set_captured_preview_team1(preview_surface_team1)
+        webcam_display.set_captured_preview_team2(preview_surface_team2)
         
         # Analyze the gesture using the frame stored by capture_frame (which is now the correctly cropped version)
-        future = asyncio.run_coroutine_threadsafe(
-            self.gesture_recognizer.analyze_gesture(), self.async_loop)
+        future_team1 = asyncio.run_coroutine_threadsafe(
+            self.gesture_recognizer.analyze_gesture(1), self.async_loop)
 
-        future.add_done_callback(
-        lambda f: print("Detect gesture:", f.result()))
+        future_team1.add_done_callback(
+        lambda f: print("Detect gesture for team 1:", f.result()))
+
+        future_team2 = asyncio.run_coroutine_threadsafe(
+            self.gesture_recognizer.analyze_gesture(2), self.async_loop)
+
+        future_team2.add_done_callback(
+        lambda f: print("Detect gesture for team 2:", f.result()))

@@ -137,7 +137,8 @@ class WebcamDisplay:
         self.rect = pygame.Rect(x, y, width, height)
         self.btn_font = btn_font
         self.last_frame = None
-        self.captured_preview = None
+        self.captured_preview_team1 = None
+        self.captured_preview_team2 = None
         
     def draw_camera_feed(self, screen, frame_surface):
         """Draw the camera feed"""
@@ -154,22 +155,29 @@ class WebcamDisplay:
         screen.blit(text, text.get_rect(center=(self.rect.centerx, self.rect.centery)))
     
     def draw_preview(self, screen):
-        """Draw the captured frame preview"""
-        if self.captured_preview is not None:
-            # Position the preview next to the live feed instead of fixed offset
-            preview_x = self.rect.x + self.rect.width + 30
-            preview_rect = pygame.Rect(preview_x, self.rect.y, self.rect.width, self.rect.height)
+        """Draw the captured frame previews side by side"""
+        if self.captured_preview_team1 is not None and self.captured_preview_team2 is not None:
+            # Position the first preview
+            preview_x1 = self.rect.x + self.rect.width + 30
+            preview_rect1 = pygame.Rect(preview_x1, self.rect.y, self.rect.width/2, self.rect.height)
             
-            screen.blit(self.captured_preview, preview_rect)
-            pygame.draw.rect(screen, WHITE, preview_rect, 2)
+            screen.blit(self.captured_preview_team1, preview_rect1)
+            pygame.draw.rect(screen, WHITE, preview_rect1, 2)
             
-            # Label
-            label = self.btn_font.render("Last capture", True, WHITE)
-            screen.blit(label, (preview_rect.x, preview_rect.y + self.rect.height + 4))
+            # Position the second preview
+            preview_x2 = preview_x1 + self.rect.width/2  + 30
+            preview_rect2 = pygame.Rect(preview_x2, self.rect.y, self.rect.width/2, self.rect.height)
 
-    def set_captured_preview(self, surface):
+            screen.blit(self.captured_preview_team2, preview_rect2)
+            pygame.draw.rect(screen, WHITE, preview_rect2, 2)
+
+    def set_captured_preview_team1(self, surface):
         """Set the preview of the captured frame"""
-        self.captured_preview = surface
+        self.captured_preview_team1 = surface
+
+    def set_captured_preview_team2(self, surface):
+        """Set the preview of the captured frame"""
+        self.captured_preview_team2 = surface
 
 class TeamView:
     """A modern UI component that displays team information in a Tailwind-like style"""
@@ -318,4 +326,4 @@ class TeamView:
         if current_line:
             lines.append(' '.join(current_line))
         
-        return lines 
+        return lines

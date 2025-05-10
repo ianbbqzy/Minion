@@ -10,9 +10,8 @@ import os
 
 class GestureRecognizer:
     def __init__(self, api_key=None):
-        self.last_frame = None
-        self.last_gesture = ""
-        self.captured_preview_surface = None
+        self.last_frame_team1 = None
+        self.last_frame_team2 = None
         # Use API key from parameter, environment variable, or .env file
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
@@ -23,32 +22,40 @@ class GestureRecognizer:
             # api_type_to_use = os.getenv("OPENAI_API_TYPE", "openai")
             self.client = AsyncOpenAI(api_key=self.api_key)
         
-    def capture_frame(self, frame_rgb):
+    def capture_frame(self, team, frame_rgb):
         """Save the captured frame for analysis"""
         if frame_rgb is None or frame_rgb.size == 0:
             print("Warning: GestureRecognizer.capture_frame received an empty or None frame.")
-            self.last_frame = None
-            self.captured_preview_surface = None
+            self.last_frame_team1 = None
+            self.last_frame_team2 = None
             return None
 
-        self.last_frame = frame_rgb
+        if team == 1:
+            self.last_frame_team1 =frame_rgb
+        if team == 2:
+            self.last_frame_team2 = frame_rgb
         
         try:
             # Build the pygame surface for the thumbnail
             flipped_frame = np.flipud(frame_rgb)  # flip Y so it isn't upside-down
-            self.captured_preview_surface = pygame.surfarray.make_surface(flipped_frame)
+            captured_preview_surface = pygame.surfarray.make_surface(flipped_frame)
         except ValueError as e:
             print(f"Error processing frame in GestureRecognizer.capture_frame: {e}")
             print(f"Offending frame_rgb shape: {getattr(frame_rgb, 'shape', 'N/A')}, dtype: {getattr(frame_rgb, 'dtype', 'N/A')}, size: {getattr(frame_rgb, 'size', 'N/A')}")
-            self.last_frame = None # Ensure consistency
-            self.captured_preview_surface = None
+            self.last_frame_team1 = None
+            self.last_frame_team2 = None
             return None
         
-        return self.captured_preview_surface
+        return captured_preview_surface
     
-    async def analyze_gesture(self) -> str:
+    async def analyze_gesture(self, team) -> str:
         """Send the captured frame to GPT-4o Vision and get the gesture"""
-        if self.last_frame is None or self.last_frame.size == 0:
+        if self.last_frame_team1 is None or self.last_frame_team1.size == 0:
+            print("Warning: analyze_gesture called with no valid frame.")
+            self.last_gesture = "Error: No valid frame"
+            return "Error: No valid frame"
+        
+        if self.last_frame_team2 is None or self.last_frame_team2.size == 0:
             print("Warning: analyze_gesture called with no valid frame.")
             self.last_gesture = "Error: No valid frame"
             return "Error: No valid frame"
@@ -65,7 +72,10 @@ class GestureRecognizer:
         
         try:
             # Convert the RGB frame to BGR for OpenCV
-            frame_bgr = cv2.cvtColor(self.last_frame, cv2.COLOR_RGB2BGR)
+            if team == 1:
+                frame_bgr = cv2.cvtColor(self.last_frame_team1, cv2.COLOR_RGB2BGR)
+            if team == 2:
+                frame_bgr = cv2.cvtColor(self.last_frame_team2, cv2.COLOR_RGB2BGR)
             
             # Encode the image as PNG
             _, png = cv2.imencode(".png", frame_bgr)
