@@ -63,3 +63,23 @@ PREVIEW_GAP = 8  # Vertical spacing between UI blocks
 DIALOGUE_DISPLAY_TIME = 3000  # 3 seconds 
 
 MINIONS_PER_TEAM = 2
+
+TEAM1_MINION_1_INSTRUCTIONS = [
+    "You are strong. Your objective is to predict where the enemy goes next and clash with them to eat them up.",
+]
+
+TEAM1_MINION_2_INSTRUCTIONS = [
+    "if the player gestures thumbs up, you should go for banana",
+    "if the player gestures thumbs down, you should go for sushi",
+    "if the player make a finger heart, you should go for donut",
+]
+
+TEAM2_MINION_1_INSTRUCTIONS = [
+    "You are strong. Your objective is to predict where the enemy goes next and clash with them to eat them up.",
+]
+
+TEAM2_MINION_2_INSTRUCTIONS = [
+    "if the player gestures thumbs up, you should go for banana",
+    "if the player gestures thumbs down, you should go for sushi",
+    "if the player make a finger heart, you should go for donut",
+]

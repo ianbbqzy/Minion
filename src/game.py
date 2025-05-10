@@ -24,7 +24,7 @@ from src.ai.gesture_recognition import GestureRecognizer
 from src.entities.minion import Minion
 from src.entities.guide import Guide
 from src.ai.ai_service import AIService
-from src.utils.constants import TEAM1_MINION_1, TEAM1_MINION_2, TEAM2_MINION_1, TEAM2_MINION_2
+from src.utils.constants import TEAM1_MINION_1, TEAM1_MINION_2, TEAM2_MINION_1, TEAM2_MINION_2, TEAM1_MINION_1_INSTRUCTIONS, TEAM1_MINION_2_INSTRUCTIONS, TEAM2_MINION_1_INSTRUCTIONS, TEAM2_MINION_2_INSTRUCTIONS
 
 class Game:
     def __init__(self):
@@ -149,10 +149,10 @@ class Game:
             "style": "hectic"
         }
         
-        self.team1_minion_1 = Minion(1, self.game_state.team1_minion_1_pos, team1_personality)
-        self.team1_minion_2 = Minion(1, self.game_state.team1_minion_2_pos, team1_personality)
-        self.team2_minion_1 = Minion(2, self.game_state.team2_minion_1_pos, team2_personality)
-        self.team2_minion_2 = Minion(2, self.game_state.team2_minion_2_pos, team2_personality)
+        self.team1_minion_1 = Minion(1, self.game_state.team1_minion_1_pos, team1_personality, TEAM1_MINION_1_INSTRUCTIONS)
+        self.team1_minion_2 = Minion(1, self.game_state.team1_minion_2_pos, team1_personality, TEAM1_MINION_2_INSTRUCTIONS)
+        self.team2_minion_1 = Minion(2, self.game_state.team2_minion_1_pos, team2_personality, TEAM2_MINION_1_INSTRUCTIONS)
+        self.team2_minion_2 = Minion(2, self.game_state.team2_minion_2_pos, team2_personality, TEAM2_MINION_2_INSTRUCTIONS)
                 
         # Add this line to initialize the new attribute for the live frame
         self.live_pygame_frame_surface = None
