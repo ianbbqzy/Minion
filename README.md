@@ -6,6 +6,8 @@ A 2D top-down game where minions move around on a beautiful tilemap.
 
 1. Install the required dependencies:
    ```
+   python3 -m venv .venv
+   source .venv/bin/activate
    pip install -r requirements.txt
    ```
 
