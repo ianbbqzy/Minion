@@ -42,15 +42,16 @@ class Minion:
         # Store the gesture as the last_gesture to be used in decision making
         if gesture and gesture.lower() != "unknown":
             self.last_gesture = gesture
-            print(f"Minion {self.team_id} received new gesture: {gesture}")
+            print(f"Minion {self.name} received new gesture: {gesture}")
             return True
         else:
-            print(f"Minion {self.team_id} received unclear gesture")
+            print(f"Minion {self.name} received unclear gesture")
             return False
     
     async def decide_move(self, grid, ai_service=None, collected_items=None, target_items=None):
         """Decide next move based on personality and grid state"""
         # Get AI response and cache it for both move and dialogue
+        print(f"Minion {self.name} last gesture: {self.last_gesture}")
         self.ai_response = await ai_service.get_minion_action(
             self, 
             grid, 

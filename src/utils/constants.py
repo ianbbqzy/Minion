@@ -69,9 +69,10 @@ TEAM1_MINION_1_INSTRUCTIONS = [
 ]
 
 TEAM1_MINION_2_INSTRUCTIONS = [
-    "if the player gestures thumbs up, you should go for banana",
-    "if the player gestures thumbs down, you should go for sushi",
-    "if the player make a finger heart, you should go for donut",
+    "Don't ever stay, if instructions are not clear, you should go for something random",
+    "if the player acts suprised, you should go for banana",
+    "if the player acts happy, you should go for sushi",
+    "if the player acts sad, you should go for donut",
 ]
 
 TEAM2_MINION_1_INSTRUCTIONS = [
