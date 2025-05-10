@@ -104,7 +104,7 @@ class UIManager:
         # Create AI button
         self.ai_button = Button(
             pygame.Rect(ai_button_x, button_y, button_width, button_height),
-            "Take AI Turn",
+            "Waiting For Player Signal",
             self.btn_font
         )
 

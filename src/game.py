@@ -79,7 +79,13 @@ class Game:
         # Cound down logic 
         self.countdown_active = True
         self.countdown_start_time = pygame.time.get_ticks()
-        self.countdown_duration = 3  # seconds
+        self.countdown_duration = 5  # seconds
+
+        # Signal  Result
+        self.team1_signal = False
+        self.team2_signal = False
+
+        self.is_pausing = False
         
         # Main loop control
         self.running = True
@@ -220,6 +226,7 @@ class Game:
             self.ai_turn_processing = False
             self.ai_threads_completed = 0
             self.pending_moves = {1: None, 2: None, 3: None, 4: None}
+            self.countdown_active = True
         
         # Update webcam frame
         if self.webcam_available:
@@ -256,17 +263,22 @@ class Game:
             self.ai_turn_processing # Use this to show general "AI is thinking" if needed
         )
 
+        # Automate the ai turn when we get both player signals
+        if self.team1_signal and self.team2_signal:
+            self.start_both_ai_turns()
+
         # Countdown
-        if self.countdown_active:
+        if self.countdown_active and not self.is_pausing:
             elapsed = (pygame.time.get_ticks() - self.countdown_start_time) // 1000
             remaining = max(0, self.countdown_duration - elapsed)
 
             # Update button label to show countdown
-            self.ui_manager.webcam_button.text = f"Capturing in {remaining}..."
+            self.ui_manager.ai_button.text = f"Capturing in {remaining}..."
 
             if remaining == 0 :
                 self.query_openai(self.ui_manager.webcam_display.last_frame.copy())
                 self.countdown_start_time = pygame.time.get_ticks()
+                self.countdown_active = False
         else:
             self.countdown_start_time = pygame.time.get_ticks()
     def draw(self):
@@ -297,11 +309,12 @@ class Game:
         # Update the display
         pygame.display.flip()
 
-
-    def countdown_toggle(self):
-        self.countdown_active = not self.countdown_active
-        if self.countdown_active == False :
-             self.ui_manager.webcam_button.text = "Pause capture"
+    def state_toggle(self):
+        self.is_pausing = not self.is_pausing
+        if self.is_pausing :
+            self.ui_manager.webcam_button.text = "Resume"
+        else:
+            self.ui_manager.webcam_button.text = "Pause"
     
     def start_both_ai_turns(self):
         """Start the AI thinking process for both teams simultaneously."""
@@ -311,6 +324,8 @@ class Game:
         self.ai_turn_processing = True
         self.ai_threads_completed = 0
         self.pending_moves = {1: None, 2: None, 3: None, 4: None}
+        self.team1_signal = False
+        self.team2_signal = False
 
         current_grid_snapshot = [row[:] for row in self.game_state.grid]
 
@@ -562,10 +577,14 @@ class Game:
                 if team_id == 1:
                     self.team1_minion_1.receive_analysis_results(facial_expression, gesture)
                     self.team1_minion_2.receive_analysis_results(facial_expression, gesture)
+                    self.team1_signal = True
                 elif team_id == 2:
                     self.team2_minion_1.receive_analysis_results(facial_expression, gesture)
                     self.team2_minion_2.receive_analysis_results(facial_expression, gesture)
+                    self.team2_signal = True
                 
+                self.ui_manager.ai_button.text = "Thinking....."
+
                 understood_guide = current_guide.receive_detection_results(facial_expression, gesture)
                 
                 if understood_guide:
