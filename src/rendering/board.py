@@ -67,9 +67,13 @@ class BoardRenderer:
                 elif item_code == 3:  # Banana
                     screen.blit(self.sprites.sprites["banana"], (rect_x, rect_y))
                 elif item_code == 4:  # Team 1 Minion
-                    screen.blit(self.sprites.sprites["team1"], (rect_x, rect_y))
+                    screen.blit(self.sprites.sprites["team1_minion_1"], (rect_x, rect_y))
                 elif item_code == 5:  # Team 2 Minion
-                    screen.blit(self.sprites.sprites["team2"], (rect_x, rect_y))
+                    screen.blit(self.sprites.sprites["team2_minion_1"], (rect_x, rect_y))
+                elif item_code == 6:  # Team 1 Minion
+                    screen.blit(self.sprites.sprites["team1_minion_2"], (rect_x, rect_y))
+                elif item_code == 7:  # Team 2 Minion
+                    screen.blit(self.sprites.sprites["team2_minion_2"], (rect_x, rect_y))
     
     def draw_sidebar(self, screen, game_state, font, small_font):
         """Draw the sidebar with game information"""
@@ -161,7 +165,7 @@ class BoardRenderer:
         if winner == 0:
             result_text = font.render("Game Over: Draw!", True, WHITE)
         else:
-            team_color = self.sprites.sprites["team1"].get_at((self.tile_size//2, self.tile_size//2)) if winner == 1 else self.sprites.sprites["team2"].get_at((self.tile_size//2, self.tile_size//2))
+            team_color = self.sprites.sprites["team1_minion_1"].get_at((self.tile_size//2, self.tile_size//2)) if winner == 1 else self.sprites.sprites["team2_minion_1"].get_at((self.tile_size//2, self.tile_size//2))
             result_text = font.render(f"Game Over: Team {winner} Wins!", True, team_color)
             
         text_rect = result_text.get_rect(center=(screen_width//2, screen_height//2))

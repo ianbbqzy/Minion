@@ -26,10 +26,14 @@ class UIManager:
         self.gradient_bg = create_gradient_background(GRADIENT_COLORS)
         
         # Store separate dialogue and thoughts for each team
-        self.team1_dialogue = ""
-        self.team1_thought = ""
-        self.team2_dialogue = ""
-        self.team2_thought = ""
+        self.team1_minion_1_dialogue = ""
+        self.team1_minion_1_thought = ""
+        self.team1_minion_2_dialogue = ""
+        self.team1_minion_2_thought = ""
+        self.team2_minion_1_dialogue = ""
+        self.team2_minion_1_thought = ""
+        self.team2_minion_2_dialogue = ""
+        self.team2_minion_2_thought = ""
         
         # Initialize UI components
         self.init_layout()
@@ -105,7 +109,7 @@ class UIManager:
             self.btn_font
         )
     
-    def update(self, game_state, dialogue, thought, team1_last_move, team2_last_move, current_team, live_frame_surface, webcam_available, ai_thinking):
+    def update(self, game_state, dialogue, thought, team1_1_last_move, team1_2_last_move, team2_1_last_move, team2_2_last_move, current_team, live_frame_surface, webcam_available, ai_thinking):
         """Update all UI components based on game state"""
         # NOTE: We don't set team dialogues/thoughts here anymore - they are set directly in Game.take_turn()
         # This avoids issues with them getting mixed up
@@ -114,17 +118,23 @@ class UIManager:
         self.team1_panel.update(
             game_state.team1_targets, 
             game_state.team1_collected,
-            self.team1_thought,  # Use team-specific thought
-            self.team1_dialogue, # Use team-specific dialogue
-            team1_last_move
+            self.team1_minion_1_thought,  # Use team-specific thought
+            self.team1_minion_1_dialogue, # Use team-specific dialogue
+            team1_1_last_move,
+            self.team1_minion_2_thought,
+            self.team1_minion_2_dialogue,
+            team1_2_last_move
         )
         
         self.team2_panel.update(
             game_state.team2_targets, 
             game_state.team2_collected,
-            self.team2_thought,  # Use team-specific thought
-            self.team2_dialogue, # Use team-specific dialogue
-            team2_last_move
+            self.team2_minion_1_thought,  # Use team-specific thought
+            self.team2_minion_1_dialogue, # Use team-specific dialogue
+            team2_1_last_move,
+            self.team2_minion_2_thought,
+            self.team2_minion_2_dialogue,
+            team2_2_last_move
         )
         
         # Update video playback

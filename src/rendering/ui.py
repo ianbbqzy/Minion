@@ -207,13 +207,16 @@ class TeamView:
         self.accent_color = (255, 100, 100) if team_id == 1 else (100, 100, 255)  # Red for team 1, blue for team 2
         self.border_color = self.accent_color
         
-    def update(self, targets, collected, thought, dialogue, move):
+    def update(self, targets, collected, thought1, dialogue1, move1, thought2, dialogue2, move2):
         """Update the team information"""
         self.targets = targets
         self.collected = collected
-        self.last_thought = thought if thought else ""
-        self.last_dialogue = dialogue if dialogue else ""
-        self.last_move = move if move else ""
+        self.last_thought_1 = thought1 if thought1 else ""
+        self.last_dialogue_1 = dialogue1 if dialogue1 else ""
+        self.last_move_1 = move1 if move1 else ""
+        self.last_thought_2 = thought2 if thought2 else ""
+        self.last_dialogue_2 = dialogue2 if dialogue2 else ""
+        self.last_move_2 = move2 if move2 else ""
         
     def draw(self, screen):
         """Draw the team information panel with modern UI style"""
@@ -267,23 +270,23 @@ class TeamView:
         y_pos += (collected_rows * (sprite_size + sprite_gap)) + 20
         
         # Last move section - only if we have a move
-        if self.last_move:
+        if self.last_move_1:
             section_title = self.font_medium.render("Last Move", True, self.text_color)
             panel_surface.blit(section_title, (20, y_pos))
             y_pos += section_title.get_height() + 5
             
-            move_text = self.font_small.render(self.last_move, True, self.text_color)
+            move_text = self.font_small.render(self.last_move_1, True, self.text_color)
             panel_surface.blit(move_text, (20, y_pos))
             y_pos += move_text.get_height() + 15
         
         # Dialogue section - only if we have dialogue
-        if self.last_dialogue:
+        if self.last_dialogue_1:
             section_title = self.font_medium.render("Dialogue", True, self.text_color)
             panel_surface.blit(section_title, (20, y_pos))
             y_pos += section_title.get_height() + 5
             
             # Wrap text to fit width
-            dialogue_lines = self._wrap_text(self.last_dialogue, self.font_small, self.rect.width - 40)
+            dialogue_lines = self._wrap_text(self.last_dialogue_1, self.font_small, self.rect.width - 40)
             for line in dialogue_lines:
                 line_surf = self.font_small.render(line, True, self.text_color)
                 panel_surface.blit(line_surf, (20, y_pos))
@@ -292,18 +295,54 @@ class TeamView:
             y_pos += 15
         
         # Thought section - only if we have a thought
-        if self.last_thought:
+        if self.last_thought_1:
             section_title = self.font_medium.render("Thought", True, self.text_color)
             panel_surface.blit(section_title, (20, y_pos))
             y_pos += section_title.get_height() + 5
             
             # Wrap text to fit width
-            thought_lines = self._wrap_text(self.last_thought, self.font_small, self.rect.width - 40)
+            thought_lines = self._wrap_text(self.last_thought_1, self.font_small, self.rect.width - 40)
             for line in thought_lines:
                 line_surf = self.font_small.render(line, True, (180, 180, 180))  # Lighter color for thoughts
                 panel_surface.blit(line_surf, (20, y_pos))
                 y_pos += line_surf.get_height() + 2
+
+        # Second minion
+        if self.last_move_2:
+            section_title = self.font_medium.render("Last Move", True, self.text_color)
+            panel_surface.blit(section_title, (20, y_pos))
+            y_pos += section_title.get_height() + 5
+            
+            move_text = self.font_small.render(self.last_move_2, True, self.text_color)
+            panel_surface.blit(move_text, (20, y_pos))
+            y_pos += move_text.get_height() + 15
         
+        # Second minion dialogue
+        if self.last_dialogue_2:
+            section_title = self.font_medium.render("Dialogue", True, self.text_color)
+            panel_surface.blit(section_title, (20, y_pos))
+            y_pos += section_title.get_height() + 5
+            
+            # Wrap text to fit width
+            dialogue_lines = self._wrap_text(self.last_dialogue_2, self.font_small, self.rect.width - 40)
+            for line in dialogue_lines:
+                line_surf = self.font_small.render(line, True, self.text_color)
+                panel_surface.blit(line_surf, (20, y_pos))
+                y_pos += line_surf.get_height() + 2
+
+        # Second minion thought
+        if self.last_thought_2:
+            section_title = self.font_medium.render("Thought", True, self.text_color)
+            panel_surface.blit(section_title, (20, y_pos))
+            y_pos += section_title.get_height() + 5
+            
+            # Wrap text to fit width
+            thought_lines = self._wrap_text(self.last_thought_2, self.font_small, self.rect.width - 40)
+            for line in thought_lines:
+                line_surf = self.font_small.render(line, True, (180, 180, 180))  # Lighter color for thoughts
+                panel_surface.blit(line_surf, (20, y_pos))
+                y_pos += line_surf.get_height() + 2
+            
         # Blit the panel to the screen
         screen.blit(panel_surface, self.rect)
     

@@ -3,7 +3,7 @@ Game state management
 """
 import numpy as np
 import random
-from src.utils.constants import GRID_HEIGHT, GRID_WIDTH, EMPTY, SUSHI, DONUT, BANANA, TEAM1_MINION, TEAM2_MINION, TILE_SIZE
+from src.utils.constants import GRID_HEIGHT, GRID_WIDTH, EMPTY, SUSHI, DONUT, BANANA, TEAM1_MINION_1, TEAM1_MINION_2, TEAM2_MINION_1, TEAM2_MINION_2, TILE_SIZE
 
 class GameState:
     def __init__(self):
@@ -16,11 +16,15 @@ class GameState:
         self.grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
         
         # Define spawn positions
-        self.TEAM1_SPAWN_POS = [0, 0]
-        self.TEAM2_SPAWN_POS = [GRID_HEIGHT - 1, GRID_WIDTH - 1] # Assuming 0-indexed
+        self.TEAM1_1_SPAWN_POS = [0, 0]
+        self.TEAM1_2_SPAWN_POS = [0, 3]
+        self.TEAM2_1_SPAWN_POS = [GRID_HEIGHT - 1, GRID_WIDTH - 1]
+        self.TEAM2_2_SPAWN_POS = [GRID_HEIGHT - 1, GRID_WIDTH - 3]
 
-        self.team1_minion_pos = self.TEAM1_SPAWN_POS[:] # Use a copy
-        self.team2_minion_pos = self.TEAM2_SPAWN_POS[:] # Use a copy
+        self.team1_minion_1_pos = self.TEAM1_1_SPAWN_POS
+        self.team1_minion_2_pos = self.TEAM1_2_SPAWN_POS
+        self.team2_minion_1_pos = self.TEAM2_1_SPAWN_POS
+        self.team2_minion_2_pos = self.TEAM2_2_SPAWN_POS
         
         # Generate target items for each team
         self.team1_targets = self.generate_targets()
@@ -38,8 +42,10 @@ class GameState:
         self.winner = None
         
         # Initialize grid with minions
-        self.grid[self.team1_minion_pos[0]][self.team1_minion_pos[1]] = TEAM1_MINION
-        self.grid[self.team2_minion_pos[0]][self.team2_minion_pos[1]] = TEAM2_MINION
+        self.grid[self.team1_minion_1_pos[0]][self.team1_minion_1_pos[1]] = TEAM1_MINION_1
+        self.grid[self.team1_minion_2_pos[0]][self.team1_minion_2_pos[1]] = TEAM1_MINION_2
+        self.grid[self.team2_minion_1_pos[0]][self.team2_minion_1_pos[1]] = TEAM2_MINION_1
+        self.grid[self.team2_minion_2_pos[0]][self.team2_minion_2_pos[1]] = TEAM2_MINION_2
         
         # Distribute items on the grid
         self.distribute_items()
@@ -81,24 +87,6 @@ class GameState:
             new_pos[1] += 1
         # "stay" does nothing
         return new_pos
-        
-    def move_minion(self, minion_pos, direction):
-        """Move a minion in the specified direction"""
-        # Clear current position
-        self.grid[minion_pos[0]][minion_pos[1]] = EMPTY
-        
-        # Calculate new position
-        new_pos = self.calculate_new_position(minion_pos, direction)
-        
-        # Update minion position
-        minion_pos[0] = new_pos[0]
-        minion_pos[1] = new_pos[1]
-        
-        # Get the minion code for the current team
-        minion_code = TEAM1_MINION if self.current_team == 1 else TEAM2_MINION
-        
-        # Update grid with new position
-        self.grid[minion_pos[0]][minion_pos[1]] = minion_code
         
     def check_item_collection(self, minion_pos, collected_items):
         """Check if the minion has collected an item, returns (collected, item_code)"""
@@ -160,19 +148,3 @@ class GameState:
         
         # Check win conditions
         self.check_win_conditions()
-    
-    def item_to_emoji(self, item_code):
-        """Convert item code to emoji"""
-        if item_code == EMPTY:
-            return "0"  # Empty
-        elif item_code == SUSHI:
-            return "🍣"  # Sushi
-        elif item_code == DONUT:
-            return "🍩"  # Donut
-        elif item_code == BANANA:
-            return "🍌"  # Banana
-        elif item_code == TEAM1_MINION:
-            return "M1"  # Team 1 Minion
-        elif item_code == TEAM2_MINION:
-            return "M2"  # Team 2 Minion
-        return "?" 

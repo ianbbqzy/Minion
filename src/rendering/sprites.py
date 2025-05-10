@@ -36,21 +36,26 @@ class SpriteManager:
         
         # Load team 1 minion sprite
         if os.path.exists(team1_path):
-            self.sprites["team1"] = self.load_and_scale_image(team1_path)
+            self.sprites["team1_minion_1"] = self.load_and_scale_image(team1_path)
+            self.sprites["team1_minion_2"] = self.create_minion_sprite(TILE_COLORS["team1_minion_2"], self.tile_size)
             print(f"Loaded team1 minion from {team1_path}")
         else:
             # Fallback to generated sprite with warning
             print(f"Warning: {team1_path} not found, using generated sprite")
-            self.sprites["team1"] = self.create_minion_sprite(TILE_COLORS["team1"], self.tile_size)
+            self.sprites["team1_minion_1"] = self.create_minion_sprite(TILE_COLORS["team1_minion_1"], self.tile_size)
         
-        # Load team 2 minion sprite
+            # Load team 2 minion sprite
+            self.sprites["team1_minion_2"] = self.create_minion_sprite(TILE_COLORS["team1_minion_2"], self.tile_size)
+            
         if os.path.exists(team2_path):
-            self.sprites["team2"] = self.load_and_scale_image(team2_path)
+            self.sprites["team2_minion_1"] = self.load_and_scale_image(team2_path)
+            self.sprites["team2_minion_2"] = self.create_minion_sprite(TILE_COLORS["team2_minion_2"], self.tile_size)
             print(f"Loaded team2 minion from {team2_path}")
         else:
             # Fallback to generated sprite with warning
             print(f"Warning: {team2_path} not found, using generated sprite")
-            self.sprites["team2"] = self.create_minion_sprite(TILE_COLORS["team2"], self.tile_size)
+            self.sprites["team2_minion_1"] = self.create_minion_sprite(TILE_COLORS["team2_minion_1"], self.tile_size)
+            self.sprites["team2_minion_2"] = self.create_minion_sprite(TILE_COLORS["team2_minion_2"], self.tile_size)
         
         # Load item sprites
         item_paths = {
@@ -161,8 +166,10 @@ class SpriteManager:
             1: "sushi",
             2: "donut",
             3: "banana",
-            4: "team1",
-            5: "team2"
+            4: "team1_minion_1",
+            5: "team1_minion_2",
+            6: "team2_minion_1",
+            7: "team2_minion_2"
         }
         
         # If it's an item tile (1-3) and we have the sprite, return a transparent surface
@@ -188,9 +195,13 @@ class SpriteManager:
         elif tile_type == 3:  # Banana
             color = TILE_COLORS["banana"]
         elif tile_type == 4:  # Team 1 Minion
-            color = TILE_COLORS["team1"]
-        elif tile_type == 5:  # Team 2 Minion
-            color = TILE_COLORS["team2"]
+            color = TILE_COLORS["team1_minion_1"]
+        elif tile_type == 5:  # Team 1 Minion
+            color = TILE_COLORS["team1_minion_2"]
+        elif tile_type == 6:  # Team 2 Minion
+            color = TILE_COLORS["team2_minion_1"]
+        elif tile_type == 7:  # Team 2 Minion
+            color = TILE_COLORS["team2_minion_2"]
         else:
             color = (200, 200, 200)  # Default gray
             
