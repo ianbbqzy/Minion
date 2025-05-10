@@ -29,19 +29,26 @@ class SpriteManager:
         # Ensure the directory exists
         os.makedirs(tiles_dir, exist_ok=True)
         
-        # Load minion sprites (fallback to generated if not found)
-        team1_path = os.path.join(tiles_dir, "team1.png")
-        team2_path = os.path.join(tiles_dir, "team2.png")
+        # Always use these exact paths for minion sprites
+        minions_dir = os.path.join("assets", "minions", "img")
+        team1_path = os.path.join(minions_dir, "green_still.png")
+        team2_path = os.path.join(minions_dir, "purple_still.png")
         
+        # Load team 1 minion sprite
         if os.path.exists(team1_path):
             self.sprites["team1"] = self.load_and_scale_image(team1_path)
+            print(f"Loaded team1 minion from {team1_path}")
         else:
+            # Fallback to generated sprite with warning
             print(f"Warning: {team1_path} not found, using generated sprite")
             self.sprites["team1"] = self.create_minion_sprite(TILE_COLORS["team1"], self.tile_size)
-            
+        
+        # Load team 2 minion sprite
         if os.path.exists(team2_path):
             self.sprites["team2"] = self.load_and_scale_image(team2_path)
+            print(f"Loaded team2 minion from {team2_path}")
         else:
+            # Fallback to generated sprite with warning
             print(f"Warning: {team2_path} not found, using generated sprite")
             self.sprites["team2"] = self.create_minion_sprite(TILE_COLORS["team2"], self.tile_size)
         

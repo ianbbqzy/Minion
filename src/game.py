@@ -395,25 +395,34 @@ class Game:
                 self.game_state.grid[pos_team2_current[0]][pos_team2_current[1]] = 0
         
         # Update state for Team 1
-        self.game_state.check_item_collection(new_pos_team1, self.game_state.team1_collected)
+        item_collected, item_type = self.game_state.check_item_collection(new_pos_team1, self.game_state.team1_collected)
         self.game_state.team1_minion_pos = new_pos_team1 # Update state tracking
         self.team1_minion.grid_pos = new_pos_team1      # Update minion object's internal position
         self.team1_guide.update_collected(self.game_state.team1_collected)
+        
+        # Start video playback if an item was collected
+        if item_collected:
+            self.ui_manager.start_video_playback(1, new_pos_team1)
+            
         if 0 <= new_pos_team1[0] < GRID_HEIGHT and 0 <= new_pos_team1[1] < GRID_WIDTH:
             self.game_state.grid[new_pos_team1[0]][new_pos_team1[1]] = 4 # Place Minion 1 marker
 
         # Update state for Team 2
-        self.game_state.check_item_collection(new_pos_team2, self.game_state.team2_collected)
+        item_collected, item_type = self.game_state.check_item_collection(new_pos_team2, self.game_state.team2_collected)
         self.game_state.team2_minion_pos = new_pos_team2 # Update state tracking
         self.team2_minion.grid_pos = new_pos_team2      # Update minion object's internal position
         self.team2_guide.update_collected(self.game_state.team2_collected)
+        
+        # Start video playback if an item was collected
+        if item_collected:
+            self.ui_manager.start_video_playback(2, new_pos_team2)
+            
         if 0 <= new_pos_team2[0] < GRID_HEIGHT and 0 <= new_pos_team2[1] < GRID_WIDTH:
              # Ensure team 2 doesn't overwrite team 1 if collision resolution failed (highly unlikely)
             if self.game_state.grid[new_pos_team2[0]][new_pos_team2[1]] == 0 : # Only place if empty
                  self.game_state.grid[new_pos_team2[0]][new_pos_team2[1]] = 5 # Place Minion 2 marker
             elif new_pos_team1 != new_pos_team2: # If spot not empty, but it's not T1's new spot, place T2
                  self.game_state.grid[new_pos_team2[0]][new_pos_team2[1]] = 5
-
 
         # Check win conditions (this might need to handle simultaneous wins if applicable)
         self.game_state.check_win_conditions()
@@ -457,3 +466,9 @@ class Game:
 
         future.add_done_callback(
         lambda f: print("Detect gesture:", f.result()))
+
+    def on_video_playback_complete(self):
+        """Handle completion of a video playback"""
+        # This gets called when the video is finished playing
+        # We can use this to do any cleanup or additional effects after the video
+        print("Video playback complete - Game notified")

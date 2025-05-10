@@ -101,14 +101,19 @@ class GameState:
         self.grid[minion_pos[0]][minion_pos[1]] = minion_code
         
     def check_item_collection(self, minion_pos, collected_items):
-        """Check if the minion has collected an item"""
+        """Check if the minion has collected an item, returns (collected, item_code)"""
         y, x = minion_pos
         item = self.grid[y][x]
         
         # If the position has an item (1-3), collect it
         if 1 <= item <= 3:
             collected_items.append(item)
-            
+            # Clear the grid cell (set to empty)
+            self.grid[y][x] = 0
+            return True, item
+        
+        return False, None
+        
     def check_win_conditions(self):
         """Check if a team has won"""
         # Check if team 1 has collected all targets

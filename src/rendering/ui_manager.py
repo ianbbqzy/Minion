@@ -2,6 +2,8 @@
 UI Manager - responsible for managing all UI components and layout
 """
 import pygame
+import os
+import random
 from src.utils.constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, GRID_WIDTH, GRID_HEIGHT,
     WEBCAM_WIDTH, WEBCAM_HEIGHT, PREVIEW_GAP, GRADIENT_COLORS
@@ -31,6 +33,9 @@ class UIManager:
         
         # Initialize UI components
         self.init_layout()
+        
+        # Initialize video elements
+        self.setup_video_elements()
         
     def init_layout(self):
         """Initialize the layout of all UI components"""
@@ -122,15 +127,16 @@ class UIManager:
             team2_last_move
         )
         
-        # We no longer update self.dialogue_box here, as that's done in Game.take_turn()
+        # Update video playback
+        self.update_video_playback()
+        
+        # Update confetti
+        self.update_confetti()
         
         # Update button states
         mouse_pos = pygame.mouse.get_pos()
         self.ai_button.update(mouse_pos)
         self.webcam_button.update(mouse_pos)
-        
-        # # Update webcam display
-        # self.webcam_display.last_frame = game_state.webcam_frame if hasattr(game_state, 'webcam_frame') else None
     
     def draw(self, screen, game_state, live_frame_surface, webcam_available, ai_thinking):
         """Draw all UI components to the screen"""
@@ -158,6 +164,18 @@ class UIManager:
         # Draw webcam preview
         self.webcam_display.draw_preview(screen)
         
+        # Draw video overlay on the specific tile if playing
+        if self.playing_video and self.video_surface and self.video_tile_pos:
+            # Calculate the pixel position of the tile
+            tile_x = self.game.BOARD_X + self.video_tile_pos[1] * TILE_SIZE
+            tile_y = self.game.BOARD_Y + self.video_tile_pos[0] * TILE_SIZE
+            
+            # Draw the video surface at the tile position
+            screen.blit(self.video_surface, (tile_x, tile_y))
+        
+        # Draw confetti
+        self.draw_confetti(screen)
+        
         # Draw AI thinking indicator
         if ai_thinking:
             thinking_text = self.font.render("Thinking...", True, (255, 255, 255))
@@ -180,3 +198,222 @@ class UIManager:
     def get_webcam_display(self):
         """Get the webcam display for the game to use"""
         return self.webcam_display 
+
+    def setup_video_elements(self):
+        """Initialize video playback and confetti elements"""
+        # Video playback control
+        self.playing_video = False
+        self.video_team = None
+        self.video_timer = 0
+        self.video_surface = None
+        self.video_tile_pos = None
+        
+        # Load minion celebration videos from minions folder
+        self.videos = {
+            1: os.path.join("assets", "minions", "videos", "green.mp4"),
+            2: os.path.join("assets", "minions", "videos", "pink.mp4")
+        }
+        
+        
+        # Confetti particles
+        self.confetti_particles = []
+        self.confetti_active = False
+        self.confetti_start_time = 0
+        self.confetti_max_duration = 2000  # 2 seconds max 
+
+    def start_video_playback(self, team_id, tile_pos):
+        """Start video playback for the given team and generate confetti"""
+        # Clean up any existing video playback first
+        self.clean_up_video()
+        
+        self.playing_video = True
+        self.video_team = team_id
+        self.video_timer = 0
+        self.video_tile_pos = tile_pos
+        
+        # Create confetti around the specific tile
+        self.generate_confetti(tile_pos)
+        
+        # Load the appropriate video using pygame movie
+        try:
+            video_path = self.videos[team_id]
+            # Using cv2 to handle the video frames
+            import cv2
+            print(f"Starting video playback: {video_path}")
+            self.video_capture = cv2.VideoCapture(video_path)
+            if not self.video_capture.isOpened():
+                print(f"Error: Could not open video {video_path}")
+                self.playing_video = False
+        except Exception as e:
+            print(f"Error loading video: {e}")
+            self.playing_video = False
+    
+    def generate_confetti(self, tile_pos):
+        """Generate confetti particles around a specific tile"""
+        self.confetti_active = True
+        self.confetti_particles = []
+        self.confetti_start_time = pygame.time.get_ticks()
+        
+        # Calculate the pixel position of the tile
+        tile_x = self.BOARD_X + tile_pos[1] * TILE_SIZE
+        tile_y = self.BOARD_Y + tile_pos[0] * TILE_SIZE
+        
+        # Create multiple confetti particles around the tile
+        for _ in range(50):
+            # Generate particles within a small radius around the tile
+            particle = {
+                'x': random.randint(tile_x - TILE_SIZE//2, tile_x + TILE_SIZE + TILE_SIZE//2),
+                'y': random.randint(tile_y - TILE_SIZE//2, tile_y + TILE_SIZE + TILE_SIZE//2),
+                'size': random.randint(3, 8),
+                'color': (
+                    random.randint(0, 255),
+                    random.randint(0, 255),
+                    random.randint(0, 255)
+                ),
+                'speed_y': random.uniform(0.5, 2.0),  # Vertical speed
+                'speed_x': random.uniform(-1.0, 1.0), # Horizontal speed
+                'rotation': random.uniform(0, 360),
+                'rotation_speed': random.uniform(-8, 8)  # Rotation speed
+            }
+            self.confetti_particles.append(particle)
+    
+    def update_video_playback(self):
+        """Update video playback state"""
+        if not self.playing_video or not hasattr(self, 'video_capture') or self.video_capture is None:
+            return
+            
+        # Read the next frame from the video
+        import cv2
+        import numpy as np
+        
+        try:
+            ret, frame = self.video_capture.read()
+            
+            if ret:
+                # Resize the frame to the size of a single tile
+                frame = cv2.resize(frame, (TILE_SIZE, TILE_SIZE))
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame = np.rot90(frame)
+                self.video_surface = pygame.surfarray.make_surface(np.flipud(frame))
+            else:
+                # Video finished or error occurred, clean up
+                print("Video playback ended")
+                self.video_capture.release()
+                self.playing_video = False
+                self.video_surface = None
+                
+                # Clear confetti when video ends
+                self.confetti_active = False
+                self.confetti_particles = []
+                
+                # Signal the game that the video is done
+                self.game.on_video_playback_complete()
+        except Exception as e:
+            print(f"Error during video playback: {e}")
+            self.clean_up_video()
+    
+    def update_confetti(self):
+        """Update confetti particles"""
+        if not self.confetti_active:
+            return
+            
+        # Check for timeout
+        current_time = pygame.time.get_ticks()
+        if current_time - self.confetti_start_time > self.confetti_max_duration:
+            self.confetti_active = False
+            self.confetti_particles = []
+            return
+            
+        for particle in self.confetti_particles[:]:
+            # Update position
+            particle['y'] += particle['speed_y']
+            particle['x'] += particle['speed_x']
+            
+            # Update rotation
+            particle['rotation'] += particle['rotation_speed']
+            
+            # Remove particles that have fallen off the screen
+            if particle['y'] > SCREEN_HEIGHT:
+                self.confetti_particles.remove(particle)
+                
+        # If all particles are gone, confetti is no longer active
+        if not self.confetti_particles:
+            self.confetti_active = False
+    
+    def draw_confetti(self, screen):
+        """Draw confetti particles"""
+        if not self.confetti_active:
+            return
+            
+        for particle in self.confetti_particles:
+            # Create a surface for the particle
+            surf = pygame.Surface((particle['size'], particle['size']), pygame.SRCALPHA)
+            pygame.draw.rect(surf, particle['color'], (0, 0, particle['size'], particle['size']))
+            
+            # Rotate the surface
+            rotated_surf = pygame.transform.rotate(surf, particle['rotation'])
+            
+            # Draw the rotated surface
+            screen.blit(rotated_surf, (particle['x'], particle['y']))
+    
+    def clean_up_video(self):
+        """Clean up video resources"""
+        try:
+            if self.playing_video and hasattr(self, 'video_capture') and self.video_capture:
+                self.video_capture.release()
+                print("Video resources released")
+        except Exception as e:
+            print(f"Error cleaning up video: {e}")
+        finally:
+            # Always reset these attributes even if there was an error
+            self.playing_video = False
+            self.video_surface = None
+            self.confetti_active = False
+            self.confetti_particles = []
+            if hasattr(self, 'video_capture'):
+                self.video_capture = None
+    
+    def draw_background(self, screen):
+        """Draw only the gradient background"""
+        screen.blit(self.gradient_bg, (0, 0))
+    
+    def draw_elements(self, screen, game_state, live_frame_surface, webcam_available, ai_thinking):
+        """Draw UI elements without the background"""
+        # Draw team panels
+        self.team1_panel.draw(screen)
+        self.team2_panel.draw(screen)
+        
+        # Draw AI button
+        self.ai_button.draw(screen)
+        
+        # Draw webcam button
+        self.webcam_button.draw(screen)
+        
+        # Draw the live webcam feed or a placeholder
+        if live_frame_surface:
+            self.webcam_display.draw_camera_feed(screen, live_frame_surface)
+        elif webcam_available:
+            self.webcam_display.draw_placeholder(screen, "Camera Error")
+        else:
+            self.webcam_display.draw_placeholder(screen, "No Camera")
+        
+        # Draw webcam preview
+        self.webcam_display.draw_preview(screen)
+        
+        # Draw video overlay on the specific tile if playing
+        if self.playing_video and self.video_surface and self.video_tile_pos:
+            # Calculate the pixel position of the tile
+            tile_x = self.game.BOARD_X + self.video_tile_pos[1] * TILE_SIZE
+            tile_y = self.game.BOARD_Y + self.video_tile_pos[0] * TILE_SIZE
+            
+            # Draw the video surface at the tile position
+            screen.blit(self.video_surface, (tile_x, tile_y))
+        
+        # Draw confetti
+        self.draw_confetti(screen)
+        
+        # Draw AI thinking indicator
+        if ai_thinking:
+            thinking_text = self.font.render("Thinking...", True, (255, 255, 255))
+            thinking_rect = thinking_text.get_rect(center=(SCREEN_WIDTH//2, self.BOARD_Y - 30))
+            screen.blit(thinking_text, thinking_rect) 
