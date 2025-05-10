@@ -1,21 +1,16 @@
 import random
 
 class Minion:
-    def __init__(self, team_id, grid_pos, personality=None, instructions=None):
+    def __init__(self, team_id, grid_pos, power, name, personality, instructions=None):
         self.team_id = team_id  # 1 or 2
+        self.name = name
         self.grid_pos = grid_pos  # [y, x]
         self.instructions = instructions
+        self.power = power
         # Set personality traits (or generate random)
-        if personality is None:
-            self.personality = {
-                "propensity_to_listen": random.uniform(0.3, 1.0),
-                "intelligence": random.randint(1, 5),
-                "speed": random.randint(1, 5),
-                "power": random.randint(1, 5),
-                "style": random.choice(["calm", "hectic", "bubbly", "serious", "confused"])
-            }
-        else:
-            self.personality = personality
+        
+        self.personality = personality
+        self.personality["power"] = power
             
         # Store received gestures
         self.last_gesture = None
