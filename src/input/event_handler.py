@@ -65,12 +65,9 @@ class EventHandler:
                 self.game.start_both_ai_turns()
         
         # Check if webcam button was clicked
-        elif self.game.ui_manager.is_webcam_button_clicked(pos) and self.game.ui_manager.webcam_display.last_frame is not None:
-            # Send the cached frame to OpenAI
-            pygame.event.set_blocked(pygame.MOUSEBUTTONDOWN)  # avoid double-click spam
-            self.game.countdown_toggle()
-            pygame.event.set_allowed(pygame.MOUSEBUTTONDOWN)
-    
+        elif self.game.ui_manager.is_webcam_button_clicked(pos):
+            self.game.state_toggle()
+
     def handle_keydown(self, key):
         """Handle key presses"""
         if key == pygame.K_SPACE:
