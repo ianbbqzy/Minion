@@ -209,7 +209,6 @@ class Game:
         self.dialogue_box.update()
         
         # Update AI thinking
-        print(self.ai_thinking)
         if self.ai_thinking:
             self.ai_thinking_time += self.clock.get_time()
             
