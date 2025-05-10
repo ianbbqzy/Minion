@@ -27,14 +27,14 @@ class AIService:
         
         # Initialize OpenAI client if we have an API key
         if self.api_key:
-            logger.info("Initializing OpenAI client...")
-            self.client = openai.OpenAI(api_key=self.api_key)
+            logger.info("Initializing OpenAI async client...")
+            self.client = openai.AsyncOpenAI(api_key=self.api_key)
         else:
             self.client = None
             
         self.model = "gpt-3.5-turbo"  # Default model, can be changed to gpt-4 for better reasoning
         
-    def get_minion_action(self, minion, grid, gesture, collected_items, target_items=None):
+    async def get_minion_action(self, minion, grid, gesture, collected_items, target_items=None):
         """
         Get a minion's action decision from OpenAI
         
@@ -65,7 +65,7 @@ class AIService:
         try:
             # Call OpenAI API with function calling and our new system prompt
             logger.info("Sending request to OpenAI API...")
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": MINION_SYSTEM_PROMPT},

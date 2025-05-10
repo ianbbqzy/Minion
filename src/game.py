@@ -59,7 +59,6 @@ class Game:
         # AI turn controls
         self.ai_thinking = False
         self.ai_thinking_time = 0
-        self.ai_thinking_max_time = 2000  # 2 seconds
         self.pending_move = None
         
         # Dialogue and gesture displays
@@ -212,31 +211,17 @@ class Game:
         # Update dialogue display
         self.dialogue_box.update()
         
-        # Update AI thinking
+        # AI is thinking if the flag is set (thread is running)
         if self.ai_thinking:
             self.ai_thinking_time += self.clock.get_time()
-            
-            # If AI has finished thinking
-            if self.ai_thinking_time >= self.ai_thinking_max_time:
-                # Decide AI move
-                if self.game_state.current_team == 1:
-                    self.pending_move = self.team1_minion.decide_move(
-                        self.game_state.grid,
-                        self.ai_service,
-                        self.game_state.team1_collected,
-                        self.game_state.team1_targets
-                    )
-                else:
-                    self.pending_move = self.team2_minion.decide_move(
-                        self.game_state.grid,
-                        self.ai_service,
-                        self.game_state.team2_collected,
-                        self.game_state.team2_targets
-                    )
-                    
-                # Execute the move
-                if self.pending_move:
-                    self.take_turn(self.pending_move)
+            # The "Thinking..." text will be displayed based on this flag.
+            # No actual decision logic here anymore.
+        
+        # Check if the AI thread has finished and populated pending_move
+        if self.pending_move is not None:
+            self.take_turn(self.pending_move) # This method will also set self.ai_thinking = False
+            self.pending_move = None # Clear the pending move after processing
+            self.ai_thinking = False # Reset the thinking flag
         
         # Update webcam frame
         if self.webcam_available:
@@ -352,32 +337,71 @@ class Game:
         pygame.display.flip()
     
     def start_ai_turn(self):
-        """Start the AI thinking process for the current team by setting ai-thinking to true
-        Then the next update will start the thinking process
-        In addition, send gesture to the minion"""
-        if self.game_state.game_over:
+        """Start the AI thinking process for the current team by launching a thread.
+        The thread will call decide_move and populate self.pending_move.
+        Also, send gesture to the minion."""
+        if self.game_state.game_over or self.ai_thinking: # Prevent starting a new AI turn if one is already in progress
             return
             
         self.ai_thinking = True
         self.ai_thinking_time = 0
-        
-        # Decide which gesture to send
+        self.pending_move = None # Ensure no stale pending move
+
+        active_minion = None
+        collected_items_snapshot = None
+        target_items_snapshot = None
+        current_grid_snapshot = [row[:] for row in self.game_state.grid] # Snapshot of the grid
+
+        # Decide which gesture to send and identify active minion/items
         if self.game_state.current_team == 1:
-            # Team 1 Guide decides gesture
             gesture = self.team1_guide.decide_gesture(
-                self.game_state.grid, 
+                current_grid_snapshot, # Use snapshot for guide decision too
                 self.game_state.team1_minion_pos, 
                 self.game_state.team2_minion_pos
             )
-            self.send_gesture(1, gesture)
+            self.send_gesture(1, gesture) # This updates minion.last_gesture_received
+            active_minion = self.team1_minion
+            collected_items_snapshot = list(self.game_state.team1_collected) # Snapshot
+            if self.game_state.team1_targets:
+                target_items_snapshot = list(self.game_state.team1_targets) # Snapshot
         else:
-            # Team 2 Guide decides gesture
             gesture = self.team2_guide.decide_gesture(
-                self.game_state.grid,
+                current_grid_snapshot, # Use snapshot
                 self.game_state.team2_minion_pos,
                 self.game_state.team1_minion_pos
             )
-            self.send_gesture(2, gesture)
+            self.send_gesture(2, gesture) # This updates minion.last_gesture_received
+            active_minion = self.team2_minion
+            collected_items_snapshot = list(self.game_state.team2_collected) # Snapshot
+            if self.game_state.team2_targets:
+                target_items_snapshot = list(self.game_state.team2_targets) # Snapshot
+        
+        # Define the task for the AI thread
+        def _ai_task_wrapper():
+            try:
+                # active_minion.decide_move is async and will use its own last_gesture_received
+                move_result = asyncio.run(active_minion.decide_move(
+                    current_grid_snapshot,    # Pass snapshot of grid
+                    self.ai_service,          # AIService instance
+                    collected_items_snapshot, # Pass snapshot of collected items
+                    target_items_snapshot     # Pass snapshot of target items
+                ))
+                self.pending_move = move_result
+            except Exception as e:
+                # Log the error and set a fallback move
+                print(f"Error in AI thread: {e}") # Replace with proper logging
+                self.pending_move = {
+                    "move": "stay",
+                    "dialogue": "Hmm, I'm a bit stuck.",
+                    "thought": f"An error occurred: {str(e)[:50]}...", # Keep thought brief
+                    "strategy": "Defaulting to a safe move."
+                }
+            # self.ai_thinking will be set to False by take_turn() when self.pending_move is processed.
+
+        # Create and start the AI thread
+        ai_thread = threading.Thread(target=_ai_task_wrapper)
+        ai_thread.daemon = True  # Allow main program to exit even if thread is running
+        ai_thread.start()
                     
     def send_gesture(self, team_id, gesture):
         """Send a gesture from the guide to the minion"""
@@ -390,64 +414,48 @@ class Game:
             # Team 2 Guide sends gesture to Team 2 Minion
             self.team2_minion.receive_gesture(gesture)
                 
-    def take_turn(self, move):
-        """Process the current team's move"""
+    def take_turn(self, ai_decision_data):
+        """Process the current team's move using the data from AI decision."""
         if self.game_state.game_over:
             return
+                
+        move_action = ai_decision_data.get("move", "stay")
+        dialogue = ai_decision_data.get("dialogue", "...")
+        thought = ai_decision_data.get("thought", "...")
+        # strategy = ai_decision_data.get("strategy") # Optional: if you want to use it
+
+        self.dialogue_box.set_dialogue(dialogue, thought)
         
-        # Reset AI thinking
-        self.ai_thinking = False
-        self.pending_move = None
-        
-        # Process the move
+        current_minion_game_pos = None
+        current_minion_collected_items = None
+        current_minion_object = None
+        current_guide_object = None
+
         if self.game_state.current_team == 1:
-            # Generate dialogue for team 1 minion
-            dialogue, thought = self.team1_minion.generate_dialogue(
-                move, 
-                self.game_state.grid,
-                self.ai_service,
-                self.game_state.team1_collected
-            )
-            self.dialogue_box.set_dialogue(dialogue, thought)
-            
-            # Calculate new position without updating the grid yet
-            new_pos = self.game_state.calculate_new_position(self.game_state.team1_minion_pos.copy(), move)
-            
-            # Check if there's an item at the new position
-            self.game_state.check_item_collection(new_pos, self.game_state.team1_collected)
-            
-            # Move team 1 minion
-            self.game_state.move_minion(self.game_state.team1_minion_pos, move)
-            
-            # Update team 1 minion's position
-            self.team1_minion.grid_pos = self.game_state.team1_minion_pos
-            
-            # Update team 1 guide's knowledge
-            self.team1_guide.update_collected(self.game_state.team1_collected)
+            current_minion_game_pos = self.game_state.team1_minion_pos
+            current_minion_collected_items = self.game_state.team1_collected
+            current_minion_object = self.team1_minion
+            current_guide_object = self.team1_guide
         else:
-            # Generate dialogue for team 2 minion
-            dialogue, thought = self.team2_minion.generate_dialogue(
-                move, 
-                self.game_state.grid,
-                self.ai_service,
-                self.game_state.team2_collected
-            )
-            self.dialogue_box.set_dialogue(dialogue, thought)
+            current_minion_game_pos = self.game_state.team2_minion_pos
+            current_minion_collected_items = self.game_state.team2_collected
+            current_minion_object = self.team2_minion
+            current_guide_object = self.team2_guide
             
-            # Calculate new position without updating the grid yet
-            new_pos = self.game_state.calculate_new_position(self.game_state.team2_minion_pos.copy(), move)
-            
-            # Check if there's an item at the new position
-            self.game_state.check_item_collection(new_pos, self.game_state.team2_collected)
-            
-            # Move team 2 minion
-            self.game_state.move_minion(self.game_state.team2_minion_pos, move)
-            
-            # Update team 2 minion's position
-            self.team2_minion.grid_pos = self.game_state.team2_minion_pos
-            
-            # Update team 2 guide's knowledge
-            self.team2_guide.update_collected(self.game_state.team2_collected)
+        # Calculate new position based on the move action
+        new_pos = self.game_state.calculate_new_position(current_minion_game_pos.copy(), move_action)
+        
+        # Check if there's an item at the new position and update collected items
+        self.game_state.check_item_collection(new_pos, current_minion_collected_items)
+        
+        # Move minion in the game state
+        self.game_state.move_minion(current_minion_game_pos, move_action) # This updates current_minion_game_pos in-place
+        
+        # Update the minion object's internal position
+        current_minion_object.grid_pos = current_minion_game_pos
+        
+        # Update the guide's knowledge of collected items
+        current_guide_object.update_collected(current_minion_collected_items)
             
         # Check win conditions
         self.game_state.check_win_conditions()
