@@ -90,10 +90,10 @@ class UIManager:
             self.btn_font
         )
 
-        # Create webcam button
+        # Create Start count button
         self.webcam_button = Button(
             pygame.Rect(webcam_button_x, button_y, button_width, button_height),
-            "Query with Camera",
+            "Pause",
             self.btn_font
         )
         
