@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import random
 import os
+import asyncio, threading
 
 from src.utils.constants import (
     SCREEN_WIDTH, SCREEN_HEIGHT, TILE_SIZE, GRID_WIDTH, GRID_HEIGHT,
@@ -471,7 +472,9 @@ class Game:
         
         # Analyze the gesture
         gesture = self.gesture_recognizer.analyze_gesture()
-        print("Gesture:", gesture)
+
+        asyncio.run_coroutine_threadsafe(
+            self.gesture_recognizer.analyze_gesture(), asyncio.get_event_loop())
         
         # You can add custom handling of the gesture here
         # For example, mapping gestures to in-game actions

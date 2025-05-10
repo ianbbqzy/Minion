@@ -3,7 +3,7 @@ OpenAI-based gesture recognition
 """
 import cv2
 import base64
-import openai
+from openai import AsyncOpenAI 
 import numpy as np
 import pygame
 import os
@@ -21,7 +21,7 @@ class GestureRecognizer:
         # Initialize OpenAI client if we have an API key
         if self.api_key:
             # api_type_to_use = os.getenv("OPENAI_API_TYPE", "openai")
-            self.client = openai.OpenAI(api_key=self.api_key)
+            self.client = AsyncOpenAI(api_key=self.api_key)
         
     def capture_frame(self, frame_rgb):
         """Save the captured frame for analysis"""
@@ -46,7 +46,7 @@ class GestureRecognizer:
         
         return self.captured_preview_surface
     
-    def analyze_gesture(self):
+    async def analyze_gesture(self) -> str:
         """Send the captured frame to GPT-4o Vision and get the gesture"""
         if self.last_frame is None or self.last_frame.size == 0:
             print("Warning: analyze_gesture called with no valid frame.")
@@ -72,7 +72,7 @@ class GestureRecognizer:
             b64_data = base64.b64encode(png.tobytes()).decode()
             
             # Call the OpenAI API
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 max_tokens=4,
                 messages=[
@@ -94,6 +94,7 @@ class GestureRecognizer:
             
             # Extract the gesture from the response
             self.last_gesture = response.choices[0].message.content.strip()
+            print("Gesture:", self.last_gesture) 
             return self.last_gesture
             
         except Exception as e:
