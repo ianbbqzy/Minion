@@ -28,8 +28,6 @@ class Minion:
             3: 1.0,  # Banana priority
         }
         
-        # Flag for using OpenAI for decisions
-        self.use_openai = False
         # Cache for OpenAI responses
         self.ai_response = None
         
@@ -37,150 +35,28 @@ class Minion:
         """Process a gesture from the guide and update item priorities"""
         self.last_gesture = gesture
         
-        # When using OpenAI, we'll just store the gesture and let OpenAI decide
-        if self.use_openai:
-            # For direct movement commands, we can still return them immediately
-            if gesture in ["point up", "point down", "point left", "point right"]:
-                return gesture.split(" ")[1]  # Extract direction
-            return None
-        
-        # Local AI logic for gesture interpretation
-        intelligence = self.personality["intelligence"]
-        obedience = self.personality["propensity_to_listen"]
-        
-        # Process gesture into item priorities
-        if gesture == "wink left eye":
-            # Prioritize donuts
-            if random.random() < obedience:
-                self.item_priorities[2] += (1.0 * intelligence / 5.0)
-                
-                # If intelligence is low, might misinterpret
-                if intelligence < 3 and random.random() < 0.3:
-                    # Might also prioritize another item by mistake
-                    other_item = random.choice([1, 3])
-                    self.item_priorities[other_item] += 0.5
-        
-        elif gesture == "wink right eye":
-            # Prioritize sushi
-            if random.random() < obedience:
-                self.item_priorities[1] += (1.0 * intelligence / 5.0)
-                
-                # If intelligence is low, might misinterpret
-                if intelligence < 3 and random.random() < 0.3:
-                    # Might also prioritize another item by mistake
-                    other_item = random.choice([2, 3])
-                    self.item_priorities[other_item] += 0.5
-        
-        elif gesture == "point up":
-            # Move upward
-            return "up"
-        
-        elif gesture == "point down":
-            # Move downward
-            return "down"
-        
-        elif gesture == "point left":
-            # Move left
-            return "left"
-        
-        elif gesture == "point right":
-            # Move right
-            return "right"
-            
-        elif gesture == "nod twice":
-            # Prioritize bananas
-            if random.random() < obedience:
-                self.item_priorities[3] += (1.0 * intelligence / 5.0)
-                
-                # If intelligence is low, might misinterpret
-                if intelligence < 3 and random.random() < 0.3:
-                    # Might also prioritize another item by mistake
-                    other_item = random.choice([1, 2])
-                    self.item_priorities[other_item] += 0.5
-                    
-        # Return None if the gesture didn't directly indicate a movement
+        # For direct movement commands, we can still return them immediately
+        if gesture in ["point up", "point down", "point left", "point right"]:
+            return gesture.split(" ")[1]  # Extract direction
         return None
+        
     
     def decide_move(self, grid, ai_service=None, collected_items=None, target_items=None):
         """Decide next move based on personality and grid state"""
-        # If using OpenAI and have an AI service available
-        if self.use_openai and ai_service:
-            # Get AI response and cache it for both move and dialogue
-            self.ai_response = ai_service.get_minion_action(
-                self, 
-                grid, 
-                self.last_gesture or "no gesture", 
-                collected_items or [],
-                target_items
-            )
-            return self.ai_response.get("move", "stay")
-        
-        # Original local AI logic
-        y, x = self.grid_pos
-        
-        # Find all nearby items
-        nearby_items = []
-        for dy in [-1, 0, 1]:
-            for dx in [-1, 0, 1]:
-                new_y, new_x = y + dy, x + dx
-                # Check bounds
-                if 0 <= new_y < len(grid) and 0 <= new_x < len(grid[0]):
-                    item = grid[new_y][new_x]
-                    if 1 <= item <= 3:  # If it's a collectible item
-                        # Calculate priority score based on item type and distance
-                        priority = self.item_priorities[item]
-                        # Closer items get higher priority
-                        distance = abs(dy) + abs(dx)
-                        if distance > 0:  # Only consider items that aren't at current position
-                            priority = priority / distance
-                        nearby_items.append({
-                            "item": item,
-                            "priority": priority,
-                            "position": (new_y, new_x)
-                        })
-        
-        # If there are nearby items, choose the highest priority
-        if nearby_items:
-            # Sort by priority (highest first)
-            nearby_items.sort(key=lambda x: x["priority"], reverse=True)
-            target_y, target_x = nearby_items[0]["position"]
-            
-            # Determine movement direction
-            if target_y < y:
-                return "up"
-            elif target_y > y:
-                return "down"
-            elif target_x < x:
-                return "left"
-            elif target_x > x:
-                return "right"
-            else:
-                return "stay"
-        else:
-            # If no nearby items, move randomly (with some intelligence consideration)
-            if self.personality["intelligence"] >= 4:
-                # Smarter minions try to explore unseen areas
-                possible_moves = []
-                for direction, (dy, dx) in [("up", (-1, 0)), ("down", (1, 0)), 
-                                          ("left", (0, -1)), ("right", (0, 1))]:
-                    new_y, new_x = y + dy, x + dx
-                    if 0 <= new_y < len(grid) and 0 <= new_x < len(grid[0]):
-                        # Prefer empty cells for exploration
-                        if grid[new_y][new_x] == 0:
-                            possible_moves.append(direction)
-                
-                if possible_moves:
-                    return random.choice(possible_moves)
-                else:
-                    return random.choice(["up", "down", "left", "right", "stay"])
-            else:
-                # Less intelligent minions move more randomly
-                return random.choice(["up", "down", "left", "right", "stay"])
+        # Get AI response and cache it for both move and dialogue
+        self.ai_response = ai_service.get_minion_action(
+            self, 
+            grid, 
+            self.last_gesture or "no gesture", 
+            collected_items or [],
+            target_items
+        )
+        return self.ai_response.get("move", "stay")
     
     def generate_dialogue(self, move, grid, ai_service=None, collected_items=None):
         """Generate dialogue based on personality and current state"""
         # If using OpenAI and we have a cached response, use it
-        if self.use_openai and self.ai_response:
+        if self.ai_response:
             return self.ai_response.get("dialogue", "..."), self.ai_response.get("thought", "...")
         
         # Original local AI logic for dialogue
