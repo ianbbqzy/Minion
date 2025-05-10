@@ -59,6 +59,24 @@ class AIService:
             
         # Create a prompt for the minion using the new prompt creator
         user_prompt = create_minion_prompt(minion, grid, gesture, collected_items, target_items)
+        
+        # Log the full prompt for debugging
+        print("\n" + "="*80)
+        print(f"TEAM {minion.team_id} MINION PROMPT:")
+        print("="*80)
+        print("GESTURE:", user_prompt["gesture"])
+        print("\nINSTRUCTIONS:")
+        for inst in user_prompt["instructions"]:
+            print(f"- {inst}")
+        print("\nPERSONALITY:", json.dumps(user_prompt["personality"], indent=2))
+        print("\nCOLLECTED ITEMS:", user_prompt["collected_items"])
+        if "debug_target_items" in user_prompt:
+            print("\nTARGET ITEMS:", user_prompt["debug_target_items"])
+        print("\nMAP:")
+        for row in user_prompt["map"]:
+            print(" ".join(row))
+        print("="*80)
+        
         logger.info(f"Making OpenAI API call for Team {minion.team_id} Minion")
         logger.debug(f"Prompt: {json.dumps(user_prompt, indent=2)}")
         
@@ -80,6 +98,16 @@ class AIService:
                 tool_call = response.choices[0].message.tool_calls[0]
                 result = json.loads(tool_call.function.arguments)
                 logger.info(f"Received response from OpenAI: {json.dumps(result, indent=2)}")
+                
+                # Print the response for debugging
+                print("\n" + "="*80)
+                print(f"TEAM {minion.team_id} MINION RESPONSE:")
+                print("="*80)
+                print("MOVE:", result.get("next_move", "stay"))
+                print("\nSTRATEGY:", result.get("strategy", "No strategy available"))
+                print("\nDIALOGUE:", result.get("dialogue", "..."))
+                print("\nTHOUGHT:", result.get("thought", "..."))
+                print("="*80 + "\n")
                 
                 # Map from the new response format to the old one
                 return {

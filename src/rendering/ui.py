@@ -139,6 +139,7 @@ class WebcamDisplay:
         self.last_frame = None
         self.captured_preview_team1 = None
         self.captured_preview_team2 = None
+        self.analysis_text = None
         
     def draw_camera_feed(self, screen, frame_surface):
         """Draw the camera feed"""
@@ -178,6 +179,10 @@ class WebcamDisplay:
     def set_captured_preview_team2(self, surface):
         """Set the preview of the captured frame"""
         self.captured_preview_team2 = surface
+        
+    def set_analysis_text(self, text):
+        """Set the analysis text results"""
+        self.analysis_text = text
 
 class TeamView:
     """A modern UI component that displays team information in a Tailwind-like style"""

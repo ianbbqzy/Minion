@@ -395,25 +395,34 @@ class Game:
                 self.game_state.grid[pos_team2_current[0]][pos_team2_current[1]] = 0
         
         # Update state for Team 1
-        self.game_state.check_item_collection(new_pos_team1, self.game_state.team1_collected)
+        item_collected, item_type = self.game_state.check_item_collection(new_pos_team1, self.game_state.team1_collected)
         self.game_state.team1_minion_pos = new_pos_team1 # Update state tracking
         self.team1_minion.grid_pos = new_pos_team1      # Update minion object's internal position
         self.team1_guide.update_collected(self.game_state.team1_collected)
+        
+        # Start video playback if an item was collected
+        if item_collected:
+            self.ui_manager.start_video_playback(1, new_pos_team1)
+            
         if 0 <= new_pos_team1[0] < GRID_HEIGHT and 0 <= new_pos_team1[1] < GRID_WIDTH:
             self.game_state.grid[new_pos_team1[0]][new_pos_team1[1]] = 4 # Place Minion 1 marker
 
         # Update state for Team 2
-        self.game_state.check_item_collection(new_pos_team2, self.game_state.team2_collected)
+        item_collected, item_type = self.game_state.check_item_collection(new_pos_team2, self.game_state.team2_collected)
         self.game_state.team2_minion_pos = new_pos_team2 # Update state tracking
         self.team2_minion.grid_pos = new_pos_team2      # Update minion object's internal position
         self.team2_guide.update_collected(self.game_state.team2_collected)
+        
+        # Start video playback if an item was collected
+        if item_collected:
+            self.ui_manager.start_video_playback(2, new_pos_team2)
+            
         if 0 <= new_pos_team2[0] < GRID_HEIGHT and 0 <= new_pos_team2[1] < GRID_WIDTH:
              # Ensure team 2 doesn't overwrite team 1 if collision resolution failed (highly unlikely)
             if self.game_state.grid[new_pos_team2[0]][new_pos_team2[1]] == 0 : # Only place if empty
                  self.game_state.grid[new_pos_team2[0]][new_pos_team2[1]] = 5 # Place Minion 2 marker
             elif new_pos_team1 != new_pos_team2: # If spot not empty, but it's not T1's new spot, place T2
                  self.game_state.grid[new_pos_team2[0]][new_pos_team2[1]] = 5
-
 
         # Check win conditions (this might need to handle simultaneous wins if applicable)
         self.game_state.check_win_conditions()
@@ -431,7 +440,22 @@ class Game:
         
         processed_frame_for_api = frame_rgb.copy() 
         original_width_as_rotated_height, _original_height_as_rotated_width, _channels = processed_frame_for_api.shape
+<<<<<<< HEAD
     
+=======
+        
+        # Get the current team's minion
+        current_minion = self.team1_minion if self.game_state.current_team == 1 else self.team2_minion
+        
+        if self.game_state.current_team == 2:
+            # Player 2's turn: use left half of the original view, because the frame is flipped horizontally.
+            # This corresponds to the top half of the rows in the rotated frame.
+            processed_frame_for_api = processed_frame_for_api[:original_width_as_rotated_height // 2, :, :]
+        else:
+            # Player 1's turn: use right half of the original view, because the frame is flipped horizontally.
+            # This corresponds to the bottom half of the rows in the rotated frame.
+            processed_frame_for_api = processed_frame_for_api[original_width_as_rotated_height // 2:, :, :]
+>>>>>>> 0f8ab40f00d6cca11e29ab5987886638a7340587
             
         # Pass the correctly cropped frame to the gesture recognizer
         preview_surface_team1 = self.gesture_recognizer.capture_frame(1, processed_frame_for_api[original_width_as_rotated_height // 2:, :, :])
@@ -454,6 +478,7 @@ class Game:
         future_team1 = asyncio.run_coroutine_threadsafe(
             self.gesture_recognizer.analyze_gesture(1), self.async_loop)
 
+<<<<<<< HEAD
         future_team1.add_done_callback(
         lambda f: print("Detect gesture for team 1:", f.result()))
 
@@ -462,3 +487,43 @@ class Game:
 
         future_team2.add_done_callback(
         lambda f: print("Detect gesture for team 2:", f.result()))
+=======
+        # Handle the result asynchronously
+        def process_analysis_result(future):
+            try:
+                result = future.result()
+                facial_expression = result.get("facial_expressions", "Unknown")
+                gesture = result.get("gestures", "Unknown")
+                
+                # Print the complete analysis
+                print(f"Analysis result: Facial expression: {facial_expression}, Gesture: {gesture}")
+                
+                # Get current team's guide
+                current_guide = self.team1_guide if self.game_state.current_team == 1 else self.team2_guide
+                
+                # Send the analysis results to both the current minion and guide
+                understood_minion = current_minion.receive_analysis_results(facial_expression, gesture)
+                understood_guide = current_guide.receive_detection_results(facial_expression, gesture)
+                
+                if understood_minion:
+                    print(f"Minion {current_minion.team_id} will use the detected gesture: {gesture}")
+                else:
+                    print(f"Minion {current_minion.team_id} ignored the unclear gesture")
+                    
+                # Add team info to the gesture display
+                display_text = f"Team {current_minion.team_id} - Expression: {facial_expression}\nGesture: {gesture}"
+                
+                # Update the webcam display directly
+                self.ui_manager.webcam_display.set_analysis_text(display_text)
+                
+            except Exception as e:
+                print(f"Error processing analysis result: {e}")
+                
+        future.add_done_callback(process_analysis_result)
+
+    def on_video_playback_complete(self):
+        """Handle completion of a video playback"""
+        # This gets called when the video is finished playing
+        # We can use this to do any cleanup or additional effects after the video
+        print("Video playback complete - Game notified")
+>>>>>>> 0f8ab40f00d6cca11e29ab5987886638a7340587

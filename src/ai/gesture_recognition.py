@@ -58,16 +58,23 @@ class GestureRecognizer:
         if self.last_frame_team2 is None or self.last_frame_team2.size == 0:
             print("Warning: analyze_gesture called with no valid frame.")
             self.last_gesture = "Error: No valid frame"
-            return "Error: No valid frame"
+            return {"facial_expressions": "Error: No valid frame", "gestures": "Error: No valid frame"}
         
         GESTURE_PROMPT = (
-            "You are a hand-gesture classifier.\n"
-            "Look at the image and answer ONLY with one "
-            "of these labels (case sensitive):\n"
-            "  • ThumbsUp\n  • ThumbsDown\n  • Victory\n  • Stop\n"
-            "  • PointLeft\n  • PointRight\n  • Fist\n  • OpenPalm\n"
-            "  • Unknown\n"
-            "If you are not sure, output Unknown."
+            "You are an expert visual analyst. Given an image, analyze the subject(s) and return a description."
+            "of any facial expressions and physical gestures visible.\n\n"
+            "Note that in the image has left and right flipped, so you need to account for that when describing the gestures.\n\n"
+            "Focus only on expressions (e.g. smiling, frowning, eyes widened, brows furrowed) and gestures "
+            "(e.g. crossed arms, hands raised, leaning forward). Do not make assumptions about the person's "
+            "identity or context beyond what is directly observable. When there is a finger pointing, make sure "
+            "to include the direction too (up, down, left, right), and when there are complex hand gestures "
+            "(peace, rocker, thumbs up, down, triangle, circle etc.), describe them to the best extent you can.\n\n"
+            "If you are unsure or the person is just in a neutral position, then just enter unknown in the output fields.\n\n"
+            "Return the output in this JSON format:\n"
+            "{\n"
+            "  \"facial_expressions\": \"string\",\n"
+            "  \"gestures\": \"string\"\n"
+            "}"
         )
         
         try:
@@ -84,7 +91,8 @@ class GestureRecognizer:
             # Call the OpenAI API
             response = await self.client.chat.completions.create(
                 model="gpt-4o-mini",
-                max_tokens=4,
+                max_tokens=200,  # Increased to accommodate JSON response
+                response_format={"type": "json_object"},  # Request JSON response
                 messages=[
                     {
                         "role": "user",
@@ -102,28 +110,23 @@ class GestureRecognizer:
                 ]
             )
             
-            # Extract the gesture from the response
-            self.last_gesture = response.choices[0].message.content.strip()
-            return self.last_gesture
+            # Extract the JSON response
+            response_content = response.choices[0].message.content.strip()
+            import json
+            try:
+                result = json.loads(response_content)
+                self.last_gesture = result  # Store the full result
+                return result
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON response: {e}")
+                print(f"Raw response: {response_content}")
+                default_result = {"facial_expressions": "Error: Invalid JSON", "gestures": "Error: Invalid JSON"}
+                self.last_gesture = default_result
+                return default_result
             
         except Exception as e:
             error_message = f"API error: {e}"
-            self.last_gesture = error_message
-            return error_message
-    
-    def map_gesture_to_direction(self, gesture):
-        """Map the recognized gesture to a game direction"""
-        if gesture == "PointUp":
-            return "up"
-        elif gesture == "PointDown":
-            return "down"
-        elif gesture == "PointLeft":
-            return "left"
-        elif gesture == "PointRight":
-            return "right"
-        elif gesture == "Stop":
-            return "stay"
-        elif gesture == "ThumbsUp":
-            return "collect"
-        else:
-            return None  # No matching direction 
+            print(error_message)
+            error_result = {"facial_expressions": error_message, "gestures": error_message}
+            self.last_gesture = error_result
+            return error_result 
