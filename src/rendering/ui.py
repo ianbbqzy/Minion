@@ -138,6 +138,7 @@ class WebcamDisplay:
         self.btn_font = btn_font
         self.last_frame = None
         self.captured_preview = None
+        self.analysis_text = None
         
     def draw_camera_feed(self, screen, frame_surface):
         """Draw the camera feed"""
@@ -166,10 +167,27 @@ class WebcamDisplay:
             # Label
             label = self.btn_font.render("Last capture", True, WHITE)
             screen.blit(label, (preview_rect.x, preview_rect.y + self.rect.height + 4))
+            
+            # Draw analysis results if available
+            if self.analysis_text:
+                # Create a semi-transparent background for text
+                analysis_bg = pygame.Surface((self.rect.width, 80), pygame.SRCALPHA)
+                analysis_bg.fill((0, 0, 0, 160))  # Semi-transparent black
+                screen.blit(analysis_bg, (preview_rect.x, preview_rect.y + self.rect.height + 24))
+                
+                # Split and render analysis text lines
+                lines = self.analysis_text.split('\n')
+                for i, line in enumerate(lines):
+                    text = self.btn_font.render(line, True, WHITE)
+                    screen.blit(text, (preview_rect.x + 5, preview_rect.y + self.rect.height + 26 + (i * 20)))
 
     def set_captured_preview(self, surface):
         """Set the preview of the captured frame"""
         self.captured_preview = surface
+        
+    def set_analysis_text(self, text):
+        """Set the analysis text results"""
+        self.analysis_text = text
 
 class TeamView:
     """A modern UI component that displays team information in a Tailwind-like style"""

@@ -63,18 +63,4 @@ class EventHandler:
             self.game.game_state.reset()
             self.game.reset_game_objects()
         
-        # Human gestures for team 1 (testing)
-        elif key == pygame.K_1:
-            self.game.send_gesture(1, "wink left eye")
-        elif key == pygame.K_2:
-            self.game.send_gesture(1, "wink right eye")
-        elif key == pygame.K_3:
-            self.game.send_gesture(1, "nod twice")
-        elif key == pygame.K_UP:
-            self.game.send_gesture(1, "point up")
-        elif key == pygame.K_DOWN:
-            self.game.send_gesture(1, "point down")
-        elif key == pygame.K_LEFT:
-            self.game.send_gesture(1, "point left")
-        elif key == pygame.K_RIGHT:
-            self.game.send_gesture(1, "point right") 
+        # Debug keyboard handling can be added here if needed 

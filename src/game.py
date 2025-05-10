@@ -441,6 +441,9 @@ class Game:
         processed_frame_for_api = frame_rgb.copy() 
         original_width_as_rotated_height, _original_height_as_rotated_width, _channels = processed_frame_for_api.shape
         
+        # Get the current team's minion
+        current_minion = self.team1_minion if self.game_state.current_team == 1 else self.team2_minion
+        
         if self.game_state.current_team == 2:
             # Player 2's turn: use left half of the original view, because the frame is flipped horizontally.
             # This corresponds to the top half of the rows in the rotated frame.
@@ -464,8 +467,38 @@ class Game:
         future = asyncio.run_coroutine_threadsafe(
             self.gesture_recognizer.analyze_gesture(), self.async_loop)
 
-        future.add_done_callback(
-        lambda f: print("Detect gesture:", f.result()))
+        # Handle the result asynchronously
+        def process_analysis_result(future):
+            try:
+                result = future.result()
+                facial_expression = result.get("facial_expressions", "Unknown")
+                gesture = result.get("gestures", "Unknown")
+                
+                # Print the complete analysis
+                print(f"Analysis result: Facial expression: {facial_expression}, Gesture: {gesture}")
+                
+                # Get current team's guide
+                current_guide = self.team1_guide if self.game_state.current_team == 1 else self.team2_guide
+                
+                # Send the analysis results to both the current minion and guide
+                understood_minion = current_minion.receive_analysis_results(facial_expression, gesture)
+                understood_guide = current_guide.receive_detection_results(facial_expression, gesture)
+                
+                if understood_minion:
+                    print(f"Minion {current_minion.team_id} will use the detected gesture: {gesture}")
+                else:
+                    print(f"Minion {current_minion.team_id} ignored the unclear gesture")
+                    
+                # Add team info to the gesture display
+                display_text = f"Team {current_minion.team_id} - Expression: {facial_expression}\nGesture: {gesture}"
+                
+                # Update the webcam display directly
+                self.ui_manager.webcam_display.set_analysis_text(display_text)
+                
+            except Exception as e:
+                print(f"Error processing analysis result: {e}")
+                
+        future.add_done_callback(process_analysis_result)
 
     def on_video_playback_complete(self):
         """Handle completion of a video playback"""
