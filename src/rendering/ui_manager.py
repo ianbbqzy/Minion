@@ -129,8 +129,8 @@ class UIManager:
         self.ai_button.update(mouse_pos)
         self.webcam_button.update(mouse_pos)
         
-        # Update webcam display
-        self.webcam_display.last_frame = game_state.webcam_frame if hasattr(game_state, 'webcam_frame') else None
+        # # Update webcam display
+        # self.webcam_display.last_frame = game_state.webcam_frame if hasattr(game_state, 'webcam_frame') else None
     
     def draw(self, screen, game_state, live_frame_surface, webcam_available, ai_thinking):
         """Draw all UI components to the screen"""
