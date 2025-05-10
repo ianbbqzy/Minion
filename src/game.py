@@ -204,6 +204,7 @@ class Game:
             ok, frame = self.webcam.read()
             if ok:
                 frame = cv2.resize(frame, (WEBCAM_WIDTH, WEBCAM_HEIGHT))
+                frame = cv2.flip(frame, 1) # Horizontally flip the frame
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frame = np.rot90(frame)
                 frame_surface = pygame.surfarray.make_surface(np.flipud(frame))
@@ -400,7 +401,24 @@ class Game:
         """Send the captured frame to the gesture recognizer and process the result"""
         # Create a preview of the captured frame
         webcam_display = self.ui_manager.get_webcam_display()
-        preview_surface = self.gesture_recognizer.capture_frame(frame_rgb.copy())
+        
+        # The frame_rgb received here is already rotated (original width becomes height, original height becomes width).
+        # To split the *original* view vertically (left/right halves), we need to split the *rotated* frame horizontally (top/bottom halves).
+        
+        processed_frame_for_api = frame_rgb.copy() 
+        original_width_as_rotated_height, _original_height_as_rotated_width, _channels = processed_frame_for_api.shape
+        
+        if self.game_state.current_team == 2:
+            # Player 2's turn: use left half of the original view, because the frame is flipped horizontally.
+            # This corresponds to the top half of the rows in the rotated frame.
+            processed_frame_for_api = processed_frame_for_api[:original_width_as_rotated_height // 2, :, :]
+        else:
+            # Player 1's turn: use right half of the original view, because the frame is flipped horizontally.
+            # This corresponds to the bottom half of the rows in the rotated frame.
+            processed_frame_for_api = processed_frame_for_api[original_width_as_rotated_height // 2:, :, :]
+            
+        # Pass the correctly cropped frame to the gesture recognizer
+        preview_surface = self.gesture_recognizer.capture_frame(processed_frame_for_api)
         
         if preview_surface is None:
             print("Error: Could not create preview surface for AI query in Game.query_openai.")
@@ -409,7 +427,7 @@ class Game:
 
         webcam_display.set_captured_preview(preview_surface)
         
-        # Analyze the gesture
+        # Analyze the gesture using the frame stored by capture_frame (which is now the correctly cropped version)
         future = asyncio.run_coroutine_threadsafe(
             self.gesture_recognizer.analyze_gesture(), self.async_loop)
 
