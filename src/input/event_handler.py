@@ -41,9 +41,8 @@ class EventHandler:
         # Check if AI button was clicked
         if self.game.ui_manager.is_ai_button_clicked(pos):
             # Only start AI turn if not already thinking
-            if not self.game.ai_thinking:
-                # Take an AI turn
-                self.game.start_ai_turn()
+            if not self.game.game_state.game_over and not self.game.ai_turn_processing:
+                self.game.start_both_ai_turns()
         
         # Check if webcam button was clicked
         elif self.game.ui_manager.is_webcam_button_clicked(pos) and self.game.ui_manager.webcam_display.last_frame is not None:
@@ -56,9 +55,9 @@ class EventHandler:
         """Handle key presses"""
         if key == pygame.K_SPACE:
             # Only start AI turn if not already thinking
-            if not self.game.ai_thinking:
+            if not self.game.ai_turn_processing:
                 # Take an AI turn
-                self.game.start_ai_turn()
+                self.game.start_both_ai_turns()
         elif key == pygame.K_r:
             # Reset game
             self.game.game_state.reset()
