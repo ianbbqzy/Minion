@@ -188,7 +188,7 @@ class TeamView:
     """A modern UI component that displays team information in a Tailwind-like style"""
     def __init__(self, team_id, x, y, width, height, font_large, font_medium, font_small, sprites):
         self.team_id = team_id
-        self.rect = pygame.Rect(x, y, width, height)
+        self.rect = pygame.Rect(x, y, width + 100, height)  # Make panel wider by adding 100 pixels
         self.font_large = font_large
         self.font_medium = font_medium
         self.font_small = font_small
@@ -197,9 +197,10 @@ class TeamView:
         # Team data
         self.targets = []
         self.collected = []
-        self.last_thought = ""
-        self.last_dialogue = ""
-        self.last_move = ""
+        
+        # History storage - for step by step tracking
+        self.step_history = []
+        self.current_step = 0
         
         # UI colors
         self.bg_color = (0, 0, 0, 160)  # Semi-transparent black background
@@ -207,23 +208,100 @@ class TeamView:
         self.accent_color = (255, 100, 100) if team_id == 1 else (100, 100, 255)  # Red for team 1, blue for team 2
         self.border_color = self.accent_color
         
-    def update(self, targets, collected, thought1, dialogue1, move1, thought2, dialogue2, move2):
+        # Scrolling
+        self.scroll_offset = 0
+        self.max_scroll = 0
+        self.scroll_area_start = 0  # Y position where scrollable area starts
+        self.scroll_bar_rect = None
+        self.scroll_bar_active = False
+        self.scroll_drag_start = None
+        
+    def update(self, targets, collected, thought1, dialogue1, move1, thought2, dialogue2, move2, step_count=None, should_add_history=True):
         """Update the team information"""
         self.targets = targets
         self.collected = collected
-        self.last_thought_1 = thought1 if thought1 else ""
-        self.last_dialogue_1 = dialogue1 if dialogue1 else ""
-        self.last_move_1 = move1 if move1 else ""
-        self.last_thought_2 = thought2 if thought2 else ""
-        self.last_dialogue_2 = dialogue2 if dialogue2 else ""
-        self.last_move_2 = move2 if move2 else ""
+        
+        # Only add to history if there's content to add AND we should add history
+        if should_add_history and any([thought1, dialogue1, move1, thought2, dialogue2, move2]):
+            # Use the provided step count, or increment our own if none provided
+            if step_count is not None:
+                self.current_step = step_count
+            else:
+                self.current_step += 1
+                
+            # Add new step at the beginning of the list (most recent first)
+            self.step_history.insert(0, {
+                'step': self.current_step,
+                'minion1': {
+                    'thought': thought1 if thought1 else "",
+                    'dialogue': dialogue1 if dialogue1 else "",
+                    'move': move1 if move1 else ""
+                },
+                'minion2': {
+                    'thought': thought2 if thought2 else "",
+                    'dialogue': dialogue2 if dialogue2 else "",
+                    'move': move2 if move2 else ""
+                }
+            })
+            
+    def clear_history(self):
+        """Clear the step history when refreshing"""
+        self.step_history = []
+        self.current_step = 0
+        self.scroll_offset = 0
+        
+    def handle_scroll(self, event):
+        """Handle scroll events"""
+        if event.type == pygame.MOUSEWHEEL:
+            # Check if mouse is over this panel
+            mouse_pos = pygame.mouse.get_pos()
+            if self.rect.collidepoint(mouse_pos):
+                # Scroll up or down
+                self.scroll_offset -= event.y * 30  # Adjust scroll speed as needed
+                self.clamp_scroll()
+        
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Left mouse button
+                mouse_pos = pygame.mouse.get_pos()
+                if self.scroll_bar_rect and self.scroll_bar_rect.collidepoint(mouse_pos):
+                    self.scroll_drag_start = mouse_pos[1]
+                    self.scroll_bar_active = True
+                    
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:  # Left mouse button
+                self.scroll_bar_active = False
+                self.scroll_drag_start = None
+                
+        elif event.type == pygame.MOUSEMOTION:
+            if self.scroll_bar_active and self.scroll_drag_start is not None:
+                # Calculate scroll based on drag distance
+                drag_distance = event.pos[1] - self.scroll_drag_start
+                
+                # Calculate scroll amount based on drag distance and content height
+                scroll_ratio = drag_distance / (self.rect.height - self.scroll_area_start)
+                scroll_amount = scroll_ratio * self.max_scroll
+                
+                # Update scroll position and drag start point
+                self.scroll_offset += scroll_amount
+                self.scroll_drag_start = event.pos[1]
+                self.clamp_scroll()
+    
+    def clamp_scroll(self):
+        """Ensure scroll offset stays within valid range"""
+        if self.scroll_offset < 0:
+            self.scroll_offset = 0
+        elif self.scroll_offset > self.max_scroll:
+            self.scroll_offset = self.max_scroll
         
     def draw(self, screen):
-        """Draw the team information panel with modern UI style"""
+        """Draw the team information panel with modern UI style and scrolling"""
         # Draw main container with rounded corners
         panel_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
         pygame.draw.rect(panel_surface, self.bg_color, (0, 0, self.rect.width, self.rect.height), border_radius=10)
         pygame.draw.rect(panel_surface, self.border_color, (0, 0, self.rect.width, self.rect.height), width=2, border_radius=10)
+        
+        # Create a separate surface for the scrollable content
+        content_surface = pygame.Surface((self.rect.width - 40, 5000), pygame.SRCALPHA)  # Height is temporary
         
         # Team header
         header_text = f"Team {self.team_id}"
@@ -269,79 +347,149 @@ class TeamView:
         collected_rows = max(1, (len(self.collected) + items_per_row - 1) // items_per_row)
         y_pos += (collected_rows * (sprite_size + sprite_gap)) + 20
         
-        # Last move section - only if we have a move
-        if self.last_move_1:
-            section_title = self.font_medium.render("Last Move", True, self.text_color)
-            panel_surface.blit(section_title, (20, y_pos))
-            y_pos += section_title.get_height() + 5
-            
-            move_text = self.font_small.render(self.last_move_1, True, self.text_color)
-            panel_surface.blit(move_text, (20, y_pos))
-            y_pos += move_text.get_height() + 15
+        # Save the starting position of scrollable content
+        self.scroll_area_start = y_pos
         
-        # Dialogue section - only if we have dialogue
-        if self.last_dialogue_1:
-            section_title = self.font_medium.render("Dialogue", True, self.text_color)
-            panel_surface.blit(section_title, (20, y_pos))
-            y_pos += section_title.get_height() + 5
-            
-            # Wrap text to fit width
-            dialogue_lines = self._wrap_text(self.last_dialogue_1, self.font_small, self.rect.width - 40)
-            for line in dialogue_lines:
-                line_surf = self.font_small.render(line, True, self.text_color)
-                panel_surface.blit(line_surf, (20, y_pos))
-                y_pos += line_surf.get_height() + 2
-            
-            y_pos += 15
+        # Create a clip rect for the scrollable area
+        scroll_clip_rect = pygame.Rect(0, 0, self.rect.width - 25, self.rect.height - self.scroll_area_start)
+        content_y_pos = 0  # This will track position in the content surface
         
-        # Thought section - only if we have a thought
-        if self.last_thought_1:
-            section_title = self.font_medium.render("Thought", True, self.text_color)
-            panel_surface.blit(section_title, (20, y_pos))
-            y_pos += section_title.get_height() + 5
-            
-            # Wrap text to fit width
-            thought_lines = self._wrap_text(self.last_thought_1, self.font_small, self.rect.width - 40)
-            for line in thought_lines:
-                line_surf = self.font_small.render(line, True, (180, 180, 180))  # Lighter color for thoughts
-                panel_surface.blit(line_surf, (20, y_pos))
-                y_pos += line_surf.get_height() + 2
-
-        # Second minion
-        if self.last_move_2:
-            section_title = self.font_medium.render("Last Move", True, self.text_color)
-            panel_surface.blit(section_title, (20, y_pos))
-            y_pos += section_title.get_height() + 5
-            
-            move_text = self.font_small.render(self.last_move_2, True, self.text_color)
-            panel_surface.blit(move_text, (20, y_pos))
-            y_pos += move_text.get_height() + 15
+        # Start drawing the scrollable history content - one section per step
+        if len(self.step_history) > 0:
+            # Render steps with most recent first
+            for step_data in self.step_history:
+                step_number = step_data['step']
+                
+                # Draw step header with step number
+                step_title = self.font_medium.render(f"Step {step_number}", True, self.accent_color)
+                content_surface.blit(step_title, (20, content_y_pos))
+                content_y_pos += step_title.get_height() + 10
+                
+                # Draw separator line
+                pygame.draw.line(content_surface, (100, 100, 100), 
+                                (20, content_y_pos), 
+                                (self.rect.width - 60, content_y_pos), 1)
+                content_y_pos += 10
+                
+                # Minion 1 section
+                minion1_title = self.font_medium.render("Minion 1", True, self.text_color)
+                content_surface.blit(minion1_title, (20, content_y_pos))
+                content_y_pos += minion1_title.get_height() + 5
+                
+                # Minion 1 thought
+                if step_data['minion1']['thought']:
+                    thought_title = self.font_small.render("Thought:", True, (150, 150, 150))
+                    content_surface.blit(thought_title, (30, content_y_pos))
+                    content_y_pos += thought_title.get_height() + 2
+                    
+                    thought_lines = self._wrap_text(step_data['minion1']['thought'], self.font_small, self.rect.width - 80)
+                    for line in thought_lines:
+                        line_surf = self.font_small.render(line, True, (180, 180, 180))
+                        content_surface.blit(line_surf, (40, content_y_pos))
+                        content_y_pos += line_surf.get_height() + 2
+                    content_y_pos += 5
+                
+                # Minion 1 dialogue
+                if step_data['minion1']['dialogue']:
+                    dialogue_title = self.font_small.render("Dialogue:", True, self.text_color)
+                    content_surface.blit(dialogue_title, (30, content_y_pos))
+                    content_y_pos += dialogue_title.get_height() + 2
+                    
+                    dialogue_lines = self._wrap_text(step_data['minion1']['dialogue'], self.font_small, self.rect.width - 80)
+                    for line in dialogue_lines:
+                        line_surf = self.font_small.render(line, True, self.text_color)
+                        content_surface.blit(line_surf, (40, content_y_pos))
+                        content_y_pos += line_surf.get_height() + 2
+                    content_y_pos += 5
+                
+                # Minion 1 move
+                if step_data['minion1']['move']:
+                    move_title = self.font_small.render("Move:", True, self.text_color)
+                    content_surface.blit(move_title, (30, content_y_pos))
+                    content_y_pos += move_title.get_height() + 2
+                    
+                    move_text = self.font_small.render(step_data['minion1']['move'], True, self.text_color)
+                    content_surface.blit(move_text, (40, content_y_pos))
+                    content_y_pos += move_text.get_height() + 10
+                
+                # Minion 2 section
+                minion2_title = self.font_medium.render("Minion 2", True, self.text_color)
+                content_surface.blit(minion2_title, (20, content_y_pos))
+                content_y_pos += minion2_title.get_height() + 5
+                
+                # Minion 2 thought
+                if step_data['minion2']['thought']:
+                    thought_title = self.font_small.render("Thought:", True, (150, 150, 150))
+                    content_surface.blit(thought_title, (30, content_y_pos))
+                    content_y_pos += thought_title.get_height() + 2
+                    
+                    thought_lines = self._wrap_text(step_data['minion2']['thought'], self.font_small, self.rect.width - 80)
+                    for line in thought_lines:
+                        line_surf = self.font_small.render(line, True, (180, 180, 180))
+                        content_surface.blit(line_surf, (40, content_y_pos))
+                        content_y_pos += line_surf.get_height() + 2
+                    content_y_pos += 5
+                
+                # Minion 2 dialogue
+                if step_data['minion2']['dialogue']:
+                    dialogue_title = self.font_small.render("Dialogue:", True, self.text_color)
+                    content_surface.blit(dialogue_title, (30, content_y_pos))
+                    content_y_pos += dialogue_title.get_height() + 2
+                    
+                    dialogue_lines = self._wrap_text(step_data['minion2']['dialogue'], self.font_small, self.rect.width - 80)
+                    for line in dialogue_lines:
+                        line_surf = self.font_small.render(line, True, self.text_color)
+                        content_surface.blit(line_surf, (40, content_y_pos))
+                        content_y_pos += line_surf.get_height() + 2
+                    content_y_pos += 5
+                
+                # Minion 2 move
+                if step_data['minion2']['move']:
+                    move_title = self.font_small.render("Move:", True, self.text_color)
+                    content_surface.blit(move_title, (30, content_y_pos))
+                    content_y_pos += move_title.get_height() + 2
+                    
+                    move_text = self.font_small.render(step_data['minion2']['move'], True, self.text_color)
+                    content_surface.blit(move_text, (40, content_y_pos))
+                    content_y_pos += move_text.get_height() + 20
+        else:
+            # Display a message when no history is available
+            no_history_text = self.font_small.render("No action history yet", True, (150, 150, 150))
+            content_surface.blit(no_history_text, (20, content_y_pos))
+            content_y_pos += no_history_text.get_height() + 10
+                
+        # Calculate the total content height and max scroll offset
+        total_content_height = content_y_pos
+        visible_height = self.rect.height - self.scroll_area_start
+        self.max_scroll = max(0, total_content_height - visible_height)
         
-        # Second minion dialogue
-        if self.last_dialogue_2:
-            section_title = self.font_medium.render("Dialogue", True, self.text_color)
-            panel_surface.blit(section_title, (20, y_pos))
-            y_pos += section_title.get_height() + 5
+        # Draw the visible portion of the scrollable content
+        visible_content = content_surface.subsurface(pygame.Rect(0, self.scroll_offset, self.rect.width - 40, min(visible_height, total_content_height - self.scroll_offset)))
+        panel_surface.blit(visible_content, (20, self.scroll_area_start))
+        
+        # Draw scroll bar if content is scrollable
+        if self.max_scroll > 0:
+            # Draw scroll track
+            scroll_track_rect = pygame.Rect(self.rect.width - 20, self.scroll_area_start, 10, visible_height)
+            pygame.draw.rect(panel_surface, (80, 80, 80), scroll_track_rect, border_radius=5)
             
-            # Wrap text to fit width
-            dialogue_lines = self._wrap_text(self.last_dialogue_2, self.font_small, self.rect.width - 40)
-            for line in dialogue_lines:
-                line_surf = self.font_small.render(line, True, self.text_color)
-                panel_surface.blit(line_surf, (20, y_pos))
-                y_pos += line_surf.get_height() + 2
-
-        # Second minion thought
-        if self.last_thought_2:
-            section_title = self.font_medium.render("Thought", True, self.text_color)
-            panel_surface.blit(section_title, (20, y_pos))
-            y_pos += section_title.get_height() + 5
+            # Calculate scroll thumb size and position
+            thumb_height = max(30, visible_height * (visible_height / total_content_height))
+            thumb_pos = self.scroll_area_start + (self.scroll_offset / total_content_height) * visible_height
             
-            # Wrap text to fit width
-            thought_lines = self._wrap_text(self.last_thought_2, self.font_small, self.rect.width - 40)
-            for line in thought_lines:
-                line_surf = self.font_small.render(line, True, (180, 180, 180))  # Lighter color for thoughts
-                panel_surface.blit(line_surf, (20, y_pos))
-                y_pos += line_surf.get_height() + 2
+            # Draw scroll thumb
+            scroll_thumb_rect = pygame.Rect(self.rect.width - 20, thumb_pos, 10, thumb_height)
+            pygame.draw.rect(panel_surface, (150, 150, 150), scroll_thumb_rect, border_radius=5)
+            
+            # Store the scroll bar rect for interaction (adjust to screen coordinates)
+            self.scroll_bar_rect = pygame.Rect(
+                self.rect.x + self.rect.width - 20,
+                self.rect.y + thumb_pos,
+                10,
+                thumb_height
+            )
+        else:
+            self.scroll_bar_rect = None
             
         # Blit the panel to the screen
         screen.blit(panel_surface, self.rect)

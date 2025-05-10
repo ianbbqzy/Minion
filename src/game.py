@@ -180,6 +180,13 @@ class Game:
         self.team2_1_last_move = ""
         self.team2_2_last_move = ""
         
+        # Clear team panel history
+        self.ui_manager.team1_panel.clear_history()
+        self.ui_manager.team2_panel.clear_history()
+        
+        # Reset UI Manager's step counting and tracking
+        self.ui_manager.reset_tracking()
+        
         # Reset AI turn controls
         self.ai_turn_processing = False
         self.ai_threads_completed = 0

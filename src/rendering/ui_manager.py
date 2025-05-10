@@ -35,6 +35,20 @@ class UIManager:
         self.team2_minion_2_dialogue = ""
         self.team2_minion_2_thought = ""
         
+        # Store previous dialogue and thoughts to calculate deltas
+        self.prev_team1_minion_1_dialogue = ""
+        self.prev_team1_minion_1_thought = ""
+        self.prev_team1_minion_2_dialogue = ""
+        self.prev_team1_minion_2_thought = ""
+        self.prev_team2_minion_1_dialogue = ""
+        self.prev_team2_minion_1_thought = ""
+        self.prev_team2_minion_2_dialogue = ""
+        self.prev_team2_minion_2_thought = ""
+        
+        # Track AI turns for step counting
+        self.ai_turn_count = 0
+        self.last_ai_thinking = False
+        
         # Initialize UI components
         self.init_layout()
         
@@ -49,15 +63,19 @@ class UIManager:
         
         # Calculate sizes and positions for the team panels
         panel_width = 300
-        panel_height = GRID_HEIGHT * TILE_SIZE
+        # Make panels much taller to fill most of the screen
+        panel_height = SCREEN_HEIGHT - 60  # Leave 30px margin on top and bottom
         
-        # Left team panel (Team 1)
-        team1_panel_x = self.BOARD_X - panel_width - 20
-        team1_panel_y = self.BOARD_Y
+        # Account for the additional 100 pixels added in TeamView constructor
+        actual_panel_width = panel_width + 100
         
-        # Right team panel (Team 2)
+        # Left team panel (Team 1) - Positioned further left to avoid overlap with the board
+        team1_panel_x = self.BOARD_X - actual_panel_width - 20
+        team1_panel_y = 30  # Align with top margin
+        
+        # Right team panel (Team 2) - Keep same position, it's already positioned correctly
         team2_panel_x = self.BOARD_X + (GRID_WIDTH * TILE_SIZE) + 20
-        team2_panel_y = self.BOARD_Y
+        team2_panel_y = 30  # Align with top margin
         
         # Create team panels
         self.team1_panel = TeamView(
@@ -114,28 +132,77 @@ class UIManager:
         # NOTE: We don't set team dialogues/thoughts here anymore - they are set directly in Game.take_turn()
         # This avoids issues with them getting mixed up
         
+        # Track AI turn transitions to increment step counter
+        ai_turn_completed = self.last_ai_thinking and not ai_thinking
+        self.last_ai_thinking = ai_thinking
+        
+        # Calculate new dialogue/thought content (delta from previous)
+        new_team1_minion_1_dialogue = self.team1_minion_1_dialogue[len(self.prev_team1_minion_1_dialogue):]
+        new_team1_minion_1_thought = self.team1_minion_1_thought[len(self.prev_team1_minion_1_thought):]
+        new_team1_minion_2_dialogue = self.team1_minion_2_dialogue[len(self.prev_team1_minion_2_dialogue):]
+        new_team1_minion_2_thought = self.team1_minion_2_thought[len(self.prev_team1_minion_2_thought):]
+        
+        new_team2_minion_1_dialogue = self.team2_minion_1_dialogue[len(self.prev_team2_minion_1_dialogue):]
+        new_team2_minion_1_thought = self.team2_minion_1_thought[len(self.prev_team2_minion_1_thought):]
+        new_team2_minion_2_dialogue = self.team2_minion_2_dialogue[len(self.prev_team2_minion_2_dialogue):]
+        new_team2_minion_2_thought = self.team2_minion_2_thought[len(self.prev_team2_minion_2_thought):]
+        
+        # Only increment step counter if we've completed an AI turn AND we have actual new content
+        has_team1_content = any([new_team1_minion_1_dialogue, new_team1_minion_1_thought, 
+                                team1_1_last_move, new_team1_minion_2_dialogue, 
+                                new_team1_minion_2_thought, team1_2_last_move])
+                                
+        has_team2_content = any([new_team2_minion_1_dialogue, new_team2_minion_1_thought, 
+                                team2_1_last_move, new_team2_minion_2_dialogue, 
+                                new_team2_minion_2_thought, team2_2_last_move])
+        
+        # Debug prints to trace the step creation logic
+        if ai_turn_completed:
+            print(f"AI turn completed. Has content: Team1={has_team1_content}, Team2={has_team2_content}")
+            print(f"Team1 moves: '{team1_1_last_move}', '{team1_2_last_move}'")
+            print(f"Team2 moves: '{team2_1_last_move}', '{team2_2_last_move}'")
+        
+        if ai_turn_completed and (has_team1_content or has_team2_content):
+            self.ai_turn_count += 1
+            print(f"Creating new step {self.ai_turn_count}")
+        
         # Update team panels with their respective dialogue and thoughts
         self.team1_panel.update(
             game_state.team1_targets, 
             game_state.team1_collected,
-            self.team1_minion_1_thought,  # Use team-specific thought
-            self.team1_minion_1_dialogue, # Use team-specific dialogue
+            new_team1_minion_1_thought,  # Pass only new content
+            new_team1_minion_1_dialogue, # Pass only new content
             team1_1_last_move,
-            self.team1_minion_2_thought,
-            self.team1_minion_2_dialogue,
-            team1_2_last_move
+            new_team1_minion_2_thought,
+            new_team1_minion_2_dialogue,
+            team1_2_last_move,
+            self.ai_turn_count,  # Pass current AI turn count
+            has_team1_content and ai_turn_completed  # Only add history if we have content and completed a turn
         )
         
         self.team2_panel.update(
             game_state.team2_targets, 
             game_state.team2_collected,
-            self.team2_minion_1_thought,  # Use team-specific thought
-            self.team2_minion_1_dialogue, # Use team-specific dialogue
+            new_team2_minion_1_thought,  # Pass only new content
+            new_team2_minion_1_dialogue, # Pass only new content
             team2_1_last_move,
-            self.team2_minion_2_thought,
-            self.team2_minion_2_dialogue,
-            team2_2_last_move
+            new_team2_minion_2_thought,
+            new_team2_minion_2_dialogue,
+            team2_2_last_move,
+            self.ai_turn_count,  # Pass current AI turn count
+            has_team2_content and ai_turn_completed  # Only add history if we have content and completed a turn
         )
+        
+        # Save current dialogue/thoughts as previous for next update
+        self.prev_team1_minion_1_dialogue = self.team1_minion_1_dialogue
+        self.prev_team1_minion_1_thought = self.team1_minion_1_thought
+        self.prev_team1_minion_2_dialogue = self.team1_minion_2_dialogue
+        self.prev_team1_minion_2_thought = self.team1_minion_2_thought
+        
+        self.prev_team2_minion_1_dialogue = self.team2_minion_1_dialogue
+        self.prev_team2_minion_1_thought = self.team2_minion_1_thought
+        self.prev_team2_minion_2_dialogue = self.team2_minion_2_dialogue
+        self.prev_team2_minion_2_thought = self.team2_minion_2_thought
         
         # Update video playback
         self.update_video_playback()
@@ -427,3 +494,18 @@ class UIManager:
             thinking_text = self.font.render("Thinking...", True, (255, 255, 255))
             thinking_rect = thinking_text.get_rect(center=(SCREEN_WIDTH//2, self.BOARD_Y - 30))
             screen.blit(thinking_text, thinking_rect) 
+
+    def reset_tracking(self):
+        """Reset step counter and dialogue tracking for a new game"""
+        self.ai_turn_count = 0
+        self.last_ai_thinking = False
+        
+        # Reset previous dialogue/thought tracking
+        self.prev_team1_minion_1_dialogue = ""
+        self.prev_team1_minion_1_thought = ""
+        self.prev_team1_minion_2_dialogue = ""
+        self.prev_team1_minion_2_thought = ""
+        self.prev_team2_minion_1_dialogue = ""
+        self.prev_team2_minion_1_thought = ""
+        self.prev_team2_minion_2_dialogue = ""
+        self.prev_team2_minion_2_thought = "" 

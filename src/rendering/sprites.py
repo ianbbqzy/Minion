@@ -31,32 +31,41 @@ class SpriteManager:
         
         # Always use these exact paths for minion sprites
         minions_dir = os.path.join("assets", "minions", "img")
-        team1_path = os.path.join(minions_dir, "green_still.png")
-        team2_path = os.path.join(minions_dir, "purple_still.png")
+        minion1 = os.path.join(minions_dir, "green_still.png")
+        minion2 = os.path.join(minions_dir, "purple_still.png")
+        pusheen1 = os.path.join(minions_dir, "pusheen1.png")
+        pusheen2 = os.path.join(minions_dir, "pusheen2.png")
         
-        # Load team 1 minion sprite
-        if os.path.exists(team1_path):
-            self.sprites["team1_minion_1"] = self.load_and_scale_image(team1_path)
-            self.sprites["team1_minion_2"] = self.create_minion_sprite(TILE_COLORS["team1_minion_2"], self.tile_size)
-            print(f"Loaded team1 minion from {team1_path}")
+        # Load team 1 minions sprites
+        if os.path.exists(minion1):
+            self.sprites["team1_minion_1"] = self.load_and_scale_image(minion1)
+            print(f"Loaded Team 1 Minion 1 from {minion1}")
         else:
-            # Fallback to generated sprite with warning
-            print(f"Warning: {team1_path} not found, using generated sprite")
+            print(f"Warning: {minion1} not found, using generated sprite")
             self.sprites["team1_minion_1"] = self.create_minion_sprite(TILE_COLORS["team1_minion_1"], self.tile_size)
-        
-            # Load team 2 minion sprite
+            
+        if os.path.exists(minion2):
+            self.sprites["team1_minion_2"] = self.load_and_scale_image(minion2)
+            print(f"Loaded Team 1 Minion 2 from {minion2}")
+        else:
+            print(f"Warning: {minion2} not found, using generated sprite")
             self.sprites["team1_minion_2"] = self.create_minion_sprite(TILE_COLORS["team1_minion_2"], self.tile_size)
             
-        if os.path.exists(team2_path):
-            self.sprites["team2_minion_1"] = self.load_and_scale_image(team2_path)
-            self.sprites["team2_minion_2"] = self.create_minion_sprite(TILE_COLORS["team2_minion_2"], self.tile_size)
-            print(f"Loaded team2 minion from {team2_path}")
+        # Load team 2 pusheen sprites
+        if os.path.exists(pusheen1):
+            self.sprites["team2_minion_1"] = self.load_and_scale_image(pusheen1)
+            print(f"Loaded Team 2 Pusheen 1 from {pusheen1}")
         else:
-            # Fallback to generated sprite with warning
-            print(f"Warning: {team2_path} not found, using generated sprite")
+            print(f"Warning: {pusheen1} not found, using generated sprite")
             self.sprites["team2_minion_1"] = self.create_minion_sprite(TILE_COLORS["team2_minion_1"], self.tile_size)
+            
+        if os.path.exists(pusheen2):
+            self.sprites["team2_minion_2"] = self.load_and_scale_image(pusheen2)
+            print(f"Loaded Team 2 Pusheen 2 from {pusheen2}")
+        else:
+            print(f"Warning: {pusheen2} not found, using generated sprite")
             self.sprites["team2_minion_2"] = self.create_minion_sprite(TILE_COLORS["team2_minion_2"], self.tile_size)
-        
+            
         # Load item sprites
         item_paths = {
             "empty": os.path.join(tiles_dir, "empty.png"),

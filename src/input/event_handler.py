@@ -17,10 +17,30 @@ class EventHandler:
             # Handle mouse events
             if event.type == pygame.MOUSEMOTION:
                 self.handle_mouse_motion(event.pos)
+                # Pass mouse motion events to team panels for scroll drag
+                if hasattr(self.game, 'ui_manager'):
+                    self.game.ui_manager.team1_panel.handle_scroll(event)
+                    self.game.ui_manager.team2_panel.handle_scroll(event)
                     
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left mouse button
                     self.handle_mouse_click(event.pos)
+                # Pass button events to team panels for scrollbar interaction
+                if hasattr(self.game, 'ui_manager'):
+                    self.game.ui_manager.team1_panel.handle_scroll(event)
+                    self.game.ui_manager.team2_panel.handle_scroll(event)
+                    
+            if event.type == pygame.MOUSEBUTTONUP:
+                # Pass button up events to team panels for scrollbar interaction
+                if hasattr(self.game, 'ui_manager'):
+                    self.game.ui_manager.team1_panel.handle_scroll(event)
+                    self.game.ui_manager.team2_panel.handle_scroll(event)
+                    
+            if event.type == pygame.MOUSEWHEEL:
+                # Pass wheel events to team panels for scrolling
+                if hasattr(self.game, 'ui_manager'):
+                    self.game.ui_manager.team1_panel.handle_scroll(event)
+                    self.game.ui_manager.team2_panel.handle_scroll(event)
 
             # Handle key presses
             if event.type == pygame.KEYDOWN:

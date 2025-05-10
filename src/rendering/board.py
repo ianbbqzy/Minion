@@ -66,13 +66,13 @@ class BoardRenderer:
                     screen.blit(self.sprites.sprites["donut"], (rect_x, rect_y))
                 elif item_code == 3:  # Banana
                     screen.blit(self.sprites.sprites["banana"], (rect_x, rect_y))
-                elif item_code == 4:  # Team 1 Minion
+                elif item_code == 4:  # Team 1 Minion 1
                     screen.blit(self.sprites.sprites["team1_minion_1"], (rect_x, rect_y))
-                elif item_code == 5:  # Team 2 Minion
-                    screen.blit(self.sprites.sprites["team2_minion_1"], (rect_x, rect_y))
-                elif item_code == 6:  # Team 1 Minion
+                elif item_code == 5:  # Team 1 Minion 2
                     screen.blit(self.sprites.sprites["team1_minion_2"], (rect_x, rect_y))
-                elif item_code == 7:  # Team 2 Minion
+                elif item_code == 6:  # Team 2 Minion 1
+                    screen.blit(self.sprites.sprites["team2_minion_1"], (rect_x, rect_y))
+                elif item_code == 7:  # Team 2 Minion 2
                     screen.blit(self.sprites.sprites["team2_minion_2"], (rect_x, rect_y))
     
     def draw_sidebar(self, screen, game_state, font, small_font):
