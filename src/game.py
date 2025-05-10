@@ -46,7 +46,7 @@ class Game:
         
         # Calculate board position to center it (will be used by board renderer and UI manager)
         self.BOARD_X = (SCREEN_WIDTH - (GRID_WIDTH * TILE_SIZE)) // 2
-        self.BOARD_Y = 50  # Top padding
+        self.BOARD_Y = 30  # Reduced from 50 to 30 to match UI Manager
         
         # Initialize components
         self.initialize_components()

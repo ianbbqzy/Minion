@@ -3,7 +3,7 @@ Game constants used throughout the application
 """
 
 # Screen dimensions
-SCREEN_WIDTH = 1700
+SCREEN_WIDTH = 1750
 SCREEN_HEIGHT = 1000
 
 # Game grid settings

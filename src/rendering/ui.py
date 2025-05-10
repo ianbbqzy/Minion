@@ -156,16 +156,20 @@ class WebcamDisplay:
     def draw_preview(self, screen):
         """Draw the captured frame preview"""
         if self.captured_preview is not None:
-            screen.blit(self.captured_preview, (self.rect.x + 600, self.rect.y))
-            pygame.draw.rect(screen, WHITE, (self.rect.x + 600, self.rect.y, self.rect.width, self.rect.height), 2)
+            # Position the preview next to the live feed instead of fixed offset
+            preview_x = self.rect.x + self.rect.width + 30
+            preview_rect = pygame.Rect(preview_x, self.rect.y, self.rect.width, self.rect.height)
+            
+            screen.blit(self.captured_preview, preview_rect)
+            pygame.draw.rect(screen, WHITE, preview_rect, 2)
             
             # Label
             label = self.btn_font.render("Last capture", True, WHITE)
-            screen.blit(label, (self.rect.x + 600, self.rect.y + self.rect.height + 4))
+            screen.blit(label, (preview_rect.x, preview_rect.y + self.rect.height + 4))
 
     def set_captured_preview(self, surface):
         """Set the preview of the captured frame"""
-        self.captured_preview = surface 
+        self.captured_preview = surface
 
 class TeamView:
     """A modern UI component that displays team information in a Tailwind-like style"""

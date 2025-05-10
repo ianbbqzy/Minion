@@ -13,6 +13,23 @@ class BoardRenderer:
         self.tile_size = tile_size
         self.sprites = sprites
         
+        # Create a transparent version of the empty tile
+        self.create_transparent_tile()
+        
+    def create_transparent_tile(self):
+        """Create a transparent version of the empty tile for checkerboard pattern"""
+        # Get the original empty tile
+        original_tile = self.sprites.tile_surfaces[0]
+        
+        # Create a copy with 30% transparency
+        self.transparent_tile = original_tile.copy()
+        # Create a surface with alpha to apply transparency
+        alpha_surface = pygame.Surface(self.transparent_tile.get_size(), pygame.SRCALPHA)
+        alpha_surface.fill((255, 255, 204, 70))  # 30% transparency (70% alpha)
+        
+        # Apply the transparency by blitting with BLEND_RGBA_MULT
+        self.transparent_tile.blit(alpha_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        
     def draw(self, screen, grid):
         """Draw the game board with all elements"""
         # Draw board background
@@ -34,8 +51,13 @@ class BoardRenderer:
                 # Get tile type
                 item_code = grid[y][x]
                 
-                # Draw the colored tile background
-                screen.blit(self.sprites.tile_surfaces[0], (rect_x, rect_y))  # Draw grass tile
+                # Draw the colored tile background with checkerboard pattern
+                if (x + y) % 2 == 0:
+                    # Use normal empty tile
+                    screen.blit(self.sprites.tile_surfaces[0], (rect_x, rect_y))
+                else:
+                    # Use transparent empty tile
+                    screen.blit(self.transparent_tile, (rect_x, rect_y))
                 
                 # Draw cell content based on code
                 if item_code == 1:  # Sushi

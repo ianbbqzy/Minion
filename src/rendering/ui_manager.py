@@ -34,9 +34,9 @@ class UIManager:
         
     def init_layout(self):
         """Initialize the layout of all UI components"""
-        # Calculate board position to center it
+        # Calculate board position to center it - reduce top padding
         self.BOARD_X = (SCREEN_WIDTH - (GRID_WIDTH * TILE_SIZE)) // 2
-        self.BOARD_Y = 50  # Top padding
+        self.BOARD_Y = 30  # Reduced from 50 to 30
         
         # Calculate sizes and positions for the team panels
         panel_width = 300
@@ -64,10 +64,10 @@ class UIManager:
         # Create dialogue box (legacy, still needed for some functionality)
         self.dialogue_box = DialogueBox(self.font, self.thought_font)
         
-        # Calculate button positions
-        button_y = self.BOARD_Y + (GRID_HEIGHT * TILE_SIZE) + 30
+        # Calculate button positions - reduce spacing
+        button_y = self.BOARD_Y + (GRID_HEIGHT * TILE_SIZE) + 20  # Reduced from 30 to 20
         button_width = 200
-        button_height = 60
+        button_height = 50  # Reduced from 60 to 50
         button_spacing = 30
         
         # Center buttons horizontally below the board
@@ -88,8 +88,8 @@ class UIManager:
             self.btn_font
         )
         
-        # Position webcam display below buttons
-        webcam_y = button_y + button_height + 30
+        # Position webcam display below buttons - reduce spacing
+        webcam_y = button_y + button_height + 20  # Reduced from 30 to 20
         webcam_x = (SCREEN_WIDTH - (WEBCAM_WIDTH * 2) - 30) // 2  # Center both webcam views
 
         self.webcam_display = WebcamDisplay(
