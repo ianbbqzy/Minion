@@ -16,9 +16,9 @@ class GameState:
         self.grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
         
         # Define spawn positions
-        self.TEAM1_1_SPAWN_POS = [5, 5]
+        self.TEAM1_1_SPAWN_POS = [3, 5]
         self.TEAM1_2_SPAWN_POS = [0, 3]
-        self.TEAM2_1_SPAWN_POS = [4, 5]
+        self.TEAM2_1_SPAWN_POS = [5, 5]
         self.TEAM2_2_SPAWN_POS = [GRID_HEIGHT - 1, GRID_WIDTH - 3]
 
         self.team1_minion_1_pos = self.TEAM1_1_SPAWN_POS
