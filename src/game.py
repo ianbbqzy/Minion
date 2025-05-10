@@ -283,24 +283,10 @@ class Game:
 
         current_grid_snapshot = [row[:] for row in self.game_state.grid]
 
-        # --- Team 1 AI ---
-        gesture_team1 = self.team1_guide.decide_gesture(
-            current_grid_snapshot,
-            self.game_state.team1_minion_1_pos, 
-            self.game_state.team1_minion_2_pos
-        )
-        self.send_gesture(1, gesture_team1)
         
         collected_items_team1_snapshot = list(self.game_state.team1_collected)
         target_items_team1_snapshot = list(self.game_state.team1_targets) if self.game_state.team1_targets else None
 
-        # --- Team 2 AI ---
-        gesture_team2 = self.team2_guide.decide_gesture(
-            current_grid_snapshot, # Use the same initial snapshot
-            self.game_state.team2_minion_1_pos,
-            self.game_state.team2_minion_2_pos
-        )
-        self.send_gesture(2, gesture_team2)
         
         collected_items_team2_snapshot = list(self.game_state.team2_collected)
         target_items_team2_snapshot = list(self.game_state.team2_targets) if self.game_state.team2_targets else None
@@ -532,7 +518,7 @@ class Game:
             self.gesture_recognizer.analyze_gesture(2), self.async_loop)
 
         # Handle the result asynchronously
-        def process_analysis_result(future):
+        def process_analysis_result(future, team_id):
             try:
                 result = future.result()
                 facial_expression = result.get("facial_expressions", "Unknown")
@@ -542,19 +528,25 @@ class Game:
                 print(f"Analysis result: Facial expression: {facial_expression}, Gesture: {gesture}")
                 
                 # Get current team's guide
-                current_guide = self.team1_guide if self.game_state.current_team == 1 else self.team2_guide
+                current_guide = self.team1_guide if team_id == 1 else self.team2_guide
                 
                 # Send the analysis results to both the current minion and guide
-                understood_minion = current_minion.receive_analysis_results(facial_expression, gesture)
+                if team_id == 1:
+                    self.team1_minion_1.receive_analysis_results(facial_expression, gesture)
+                    self.team1_minion_2.receive_analysis_results(facial_expression, gesture)
+                elif team_id == 2:
+                    self.team2_minion_1.receive_analysis_results(facial_expression, gesture)
+                    self.team2_minion_2.receive_analysis_results(facial_expression, gesture)
+                
                 understood_guide = current_guide.receive_detection_results(facial_expression, gesture)
                 
-                if understood_minion:
-                    print(f"Minion {current_minion.team_id} will use the detected gesture: {gesture}")
+                if understood_guide:
+                    print(f"Team {team_id} minion understood the gesture")
                 else:
-                    print(f"Minion {current_minion.team_id} ignored the unclear gesture")
+                    print(f"Team {team_id} minion ignored the unclear gesture")
                     
                 # Add team info to the gesture display
-                display_text = f"Team {current_minion.team_id} - Expression: {facial_expression}\nGesture: {gesture}"
+                display_text = f"Team {team_id} - Expression: {facial_expression}\nGesture: {gesture}"
                 
                 # Update the webcam display directly
                 self.ui_manager.webcam_display.set_analysis_text(display_text)
@@ -562,8 +554,8 @@ class Game:
             except Exception as e:
                 print(f"Error processing analysis result: {e}")
                 
-        future_team1.add_done_callback(process_analysis_result)
-        future_team2.add_done_callback(process_analysis_result)
+        future_team1.add_done_callback(lambda f: process_analysis_result(f, 1))
+        future_team2.add_done_callback(lambda f: process_analysis_result(f, 2))
 
     def on_video_playback_complete(self):
         """Handle completion of a video playback"""
