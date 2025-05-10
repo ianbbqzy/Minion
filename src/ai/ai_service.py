@@ -2,7 +2,12 @@ import os
 import openai
 from dotenv import load_dotenv
 import json
+import logging
 from src.ai.ai_prompts import MINION_SYSTEM_PROMPT, MINION_DECISION_TOOL, create_minion_prompt
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Find and load environment variables from .env file
 # First try in the current directory, then in the project root
@@ -11,18 +16,18 @@ if os.path.exists(".env"):
 elif os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")):
     load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 else:
-    print("Warning: No .env file found. Please create one with your OPENAI_API_KEY.")
+    logger.warning("No .env file found. Please create one with your OPENAI_API_KEY.")
 
 class AIService:
     def __init__(self, api_key=None):
         # Use API key from parameter, environment variable, or .env file
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
-            print("Warning: No OpenAI API key found. Please set OPENAI_API_KEY.")
+            logger.warning("No OpenAI API key found. Please set OPENAI_API_KEY.")
         
         # Initialize OpenAI client if we have an API key
         if self.api_key:
-            # api_type_to_use = os.getenv("OPENAI_API_TYPE", "openai")
+            logger.info("Initializing OpenAI client...")
             self.client = openai.OpenAI(api_key=self.api_key)
         else:
             self.client = None
@@ -45,6 +50,7 @@ class AIService:
         """
         # If no client is available, return a default response
         if not self.client:
+            logger.warning("No OpenAI client available. Using default response.")
             return {
                 "move": "stay",
                 "dialogue": "I need my guide's API key to think properly!",
@@ -53,9 +59,12 @@ class AIService:
             
         # Create a prompt for the minion using the new prompt creator
         user_prompt = create_minion_prompt(minion, grid, gesture, collected_items, target_items)
+        logger.info(f"Making OpenAI API call for Team {minion.team_id} Minion")
+        logger.debug(f"Prompt: {json.dumps(user_prompt, indent=2)}")
         
         try:
             # Call OpenAI API with function calling and our new system prompt
+            logger.info("Sending request to OpenAI API...")
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -70,6 +79,7 @@ class AIService:
             if response.choices[0].message.tool_calls:
                 tool_call = response.choices[0].message.tool_calls[0]
                 result = json.loads(tool_call.function.arguments)
+                logger.info(f"Received response from OpenAI: {json.dumps(result, indent=2)}")
                 
                 # Map from the new response format to the old one
                 return {
@@ -80,6 +90,7 @@ class AIService:
                 }
                 
             # Fallback in case function calling fails
+            logger.warning("No tool calls in response. Using fallback response.")
             return {
                 "move": "stay",
                 "dialogue": "I'm not sure what to do.",
@@ -87,7 +98,7 @@ class AIService:
             }
             
         except Exception as e:
-            print(f"Error calling OpenAI API: {e}")
+            logger.error(f"Error calling OpenAI API: {e}")
             # Return a default response if API call fails
             return {
                 "move": "stay",
