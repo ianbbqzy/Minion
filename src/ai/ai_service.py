@@ -2,7 +2,7 @@ import os
 import openai
 from dotenv import load_dotenv
 import json
-from src.ai_prompts import MINION_SYSTEM_PROMPT, MINION_DECISION_TOOL, create_minion_prompt
+from src.ai.ai_prompts import MINION_SYSTEM_PROMPT, MINION_DECISION_TOOL, create_minion_prompt
 
 # Find and load environment variables from .env file
 # First try in the current directory, then in the project root
@@ -22,6 +22,7 @@ class AIService:
         
         # Initialize OpenAI client if we have an API key
         if self.api_key:
+            # api_type_to_use = os.getenv("OPENAI_API_TYPE", "openai")
             self.client = openai.OpenAI(api_key=self.api_key)
         else:
             self.client = None

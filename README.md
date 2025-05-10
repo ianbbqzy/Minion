@@ -1,61 +1,53 @@
-# Minion Movement Game
+# Signal & Strategy: The Minion's Quest
 
-A 2D top-down game where minions move around on a beautiful tilemap.
+A strategic communication game where guides use gestures to direct minions in collecting targets.
 
-## Setup
+## Overview
 
-1. Install the required dependencies:
+This game features two teams, each consisting of a Guide and a Minion. Guides communicate through gestures to help their Minions navigate a grid and collect specific target items. The first team to collect all their target items wins.
+
+## Features
+
+- Strategic gameplay with gesture-based communication
+- AI-driven minion behavior
+- OpenAI integration for gesture recognition via webcam
+- Personality-driven minion responses
+
+## Installation
+
+1. Clone this repository
+2. Install dependencies:
    ```
    python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
    ```
-
-2. Run the game:
+3. Run the game:
    ```
    python main.py
    ```
 
-## Game Controls
+## Command Line Options
 
-- Close the window to exit the game
-
-## Features
-
-- Beautiful tilemap with multiple tile types (grass, dirt, water, sand, paths)
-- Animated minions that move in random directions
-- Minions use sprite animations for different directions
-- Random map generation creates a unique environment each time
 
 ## Project Structure
 
 ```
-├── main.py              # Main entry point
-├── requirements.txt     # Python dependencies
-├── src/                 # Source code
-│   ├── game.py          # Main game logic
-│   ├── sprites.py       # Sprite classes (minions)
-│   └── tilemap.py       # Tilemap handling
-└── assets/              # Game assets
-    ├── images/          # Images
-    │   ├── tiles/       # Tile images
-    │   └── minions/     # Minion sprite sheets
-    └── sounds/          # Sound effects (future)
+src/
+├── ai/                 # AI and OpenAI integration
+├── entities/           # Game entities (minions, guides)
+├── input/              # Input handling
+├── rendering/          # Rendering and UI components
+└── utils/              # Utility classes and constants
 ```
 
-## Custom Sprites
+## Gameplay
 
-To use custom sprites, place tile images in `assets/images/tiles/` named:
-- grass.png
-- dirt.png
-- water.png
-- path.png
-- sand.png
+- Use the "Take AI Turn" button or Space key to have AI make decisions
+- Press R to restart the game
+- Arrow keys and number keys (1-3) can be used for manual gestures
+- With a webcam and OpenAI API key, you can use actual hand gestures
 
-For minion animations, place sprites in `assets/images/minions/` with naming format:
-- minion_down_1.png, minion_down_2.png, etc.
-- minion_up_1.png, minion_up_2.png, etc.
-- minion_left_1.png, minion_left_2.png, etc.
-- minion_right_1.png, minion_right_2.png, etc.
+## Credits
 
-If these files don't exist, the game will generate placeholder graphics. 
+Created for a hackathon project. 
