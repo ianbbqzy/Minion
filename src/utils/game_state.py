@@ -3,7 +3,7 @@ Game state management
 """
 import numpy as np
 import random
-from src.utils.constants import GRID_HEIGHT, GRID_WIDTH, EMPTY, SUSHI, DONUT, BANANA, TEAM1_MINION, TEAM2_MINION
+from src.utils.constants import GRID_HEIGHT, GRID_WIDTH, EMPTY, SUSHI, DONUT, BANANA, TEAM1_MINION, TEAM2_MINION, TILE_SIZE
 
 class GameState:
     def __init__(self):
@@ -15,9 +15,12 @@ class GameState:
         # Grid representation
         self.grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=int)
         
-        # Minion positions
-        self.team1_minion_pos = [0, 0]  # [y, x]
-        self.team2_minion_pos = [GRID_HEIGHT-1, GRID_WIDTH-1]  # [y, x]
+        # Define spawn positions
+        self.TEAM1_SPAWN_POS = [0, 0]
+        self.TEAM2_SPAWN_POS = [GRID_HEIGHT - 1, GRID_WIDTH - 1] # Assuming 0-indexed
+
+        self.team1_minion_pos = self.TEAM1_SPAWN_POS[:] # Use a copy
+        self.team2_minion_pos = self.TEAM2_SPAWN_POS[:] # Use a copy
         
         # Generate target items for each team
         self.team1_targets = self.generate_targets()

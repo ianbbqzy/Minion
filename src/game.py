@@ -57,13 +57,14 @@ class Game:
         # Initialize game objects
         self.initialize_game_objects()
         
-        # AI turn controls
-        self.ai_thinking = False
-        self.ai_thinking_time = 0
-        self.pending_move = None
+        # AI turn controls for simultaneous moves
+        self.ai_turn_processing = False  # True when AI decisions are being processed
+        self.ai_threads_completed = 0    # Counter for completed AI tasks
+        self.pending_moves = {1: None, 2: None}  # Stores move data for team 1 and team 2
+        self.completion_lock = threading.Lock() # For safely incrementing ai_threads_completed
         
         # Dialogue and gesture displays
-        self.current_gesture = ""
+        self.current_gestures = {1: "No gesture", 2: "No gesture"} # Store gestures for each team
         
         # Team panel data
         self.team1_last_move = ""
@@ -161,16 +162,16 @@ class Game:
         # Reset dialogue and gestures
         self.ui_manager.dialogue_box.dialogue = ""
         self.ui_manager.dialogue_box.thought = ""
-        self.current_gesture = ""
+        self.current_gestures = {1: "No gesture", 2: "No gesture"}
         
         # Reset team move info
         self.team1_last_move = ""
         self.team2_last_move = ""
         
         # Reset AI turn controls
-        self.ai_thinking = False
-        self.ai_thinking_time = 0
-        self.pending_move = None
+        self.ai_turn_processing = False
+        self.ai_threads_completed = 0
+        self.pending_moves = {1: None, 2: None}
         
     def run(self):
         """Main game loop"""
@@ -184,20 +185,17 @@ class Game:
             
     def update(self):
         """Update game state"""
-        current_time = pygame.time.get_ticks()
-        
-        # Update dialogue display
+        # Update dialogue display (if it's a general display)
         self.ui_manager.dialogue_box.update()
         
-        # AI is thinking if the flag is set (thread is running)
-        if self.ai_thinking:
-            self.ai_thinking_time += self.clock.get_time()
-        
-        # Check if the AI thread has finished and populated pending_move
-        if self.pending_move is not None:
-            self.take_turn(self.pending_move)
-            self.pending_move = None
-            self.ai_thinking = False
+        # Check if both AI tasks have finished
+        if self.ai_turn_processing and self.ai_threads_completed == 2:
+            print("AI turn completed")
+            self.process_simultaneous_moves(self.pending_moves[1], self.pending_moves[2])
+            # Reset flags for the next turn
+            self.ai_turn_processing = False
+            self.ai_threads_completed = 0
+            self.pending_moves = {1: None, 2: None}
         
         # Update webcam frame
         if self.webcam_available:
@@ -219,17 +217,17 @@ class Game:
             # Indicate no current frame available for drawing
             self.live_pygame_frame_surface = None
             
-        # Update UI manager - no longer passing dialogue/thought as they're set directly in take_turn
+        # Update UI manager
         self.ui_manager.update(
             self.game_state, 
-            "", # Empty dialogue, not used anymore
-            "", # Empty thought, not used anymore
+            "", # General dialogue/thought can be managed via team-specific attributes now
+            "", 
             self.team1_last_move, 
             self.team2_last_move, 
-            self.game_state.current_team,
+            self.game_state.current_team, # Still useful for UI highlighting
             self.live_pygame_frame_surface,
             self.webcam_available,
-            self.ai_thinking
+            self.ai_turn_processing # Use this to show general "AI is thinking" if needed
         )
     
     def draw(self):
@@ -240,7 +238,7 @@ class Game:
             self.game_state, 
             self.live_pygame_frame_surface, 
             self.webcam_available, 
-            self.ai_thinking
+            self.ai_turn_processing # Pass processing state for UI elements like thinking indicator
         )
         
         # Draw game board
@@ -260,143 +258,169 @@ class Game:
         # Update the display
         pygame.display.flip()
     
-    def start_ai_turn(self):
-        """Start the AI thinking process for the current team by launching a thread.
-        The thread will call decide_move and populate self.pending_move.
-        Also, send gesture to the minion."""
-        if self.game_state.game_over or self.ai_thinking: # Prevent starting a new AI turn if one is already in progress
-            return
+    def start_both_ai_turns(self):
+        """Start the AI thinking process for both teams simultaneously."""
+        if self.game_state.game_over or self.ai_turn_processing:
+            return # Prevent starting new AI turns if game over or already processing
             
-        self.ai_thinking = True
-        self.ai_thinking_time = 0
-        self.pending_move = None # Ensure no stale pending move
+        self.ai_turn_processing = True
+        self.ai_threads_completed = 0
+        self.pending_moves = {1: None, 2: None}
 
-        active_minion = None
-        collected_items_snapshot = None
-        target_items_snapshot = None
-        current_grid_snapshot = [row[:] for row in self.game_state.grid] # Snapshot of the grid
+        current_grid_snapshot = [row[:] for row in self.game_state.grid]
 
-        # Decide which gesture to send and identify active minion/items
-        if self.game_state.current_team == 1:
-            gesture = self.team1_guide.decide_gesture(
-                current_grid_snapshot, # Use snapshot for guide decision too
-                self.game_state.team1_minion_pos, 
-                self.game_state.team2_minion_pos
-            )
-            self.send_gesture(1, gesture) # This updates minion.last_gesture_received
-            active_minion = self.team1_minion
-            collected_items_snapshot = list(self.game_state.team1_collected) # Snapshot
-            if self.game_state.team1_targets:
-                target_items_snapshot = list(self.game_state.team1_targets) # Snapshot
-        else:
-            gesture = self.team2_guide.decide_gesture(
-                current_grid_snapshot, # Use snapshot
-                self.game_state.team2_minion_pos,
-                self.game_state.team1_minion_pos
-            )
-            self.send_gesture(2, gesture) # This updates minion.last_gesture_received
-            active_minion = self.team2_minion
-            collected_items_snapshot = list(self.game_state.team2_collected) # Snapshot
-            if self.game_state.team2_targets:
-                target_items_snapshot = list(self.game_state.team2_targets) # Snapshot
+        # --- Team 1 AI ---
+        gesture_team1 = self.team1_guide.decide_gesture(
+            current_grid_snapshot,
+            self.game_state.team1_minion_pos, 
+            self.game_state.team2_minion_pos
+        )
+        self.send_gesture(1, gesture_team1)
         
-        # Define the task for the AI thread
-        def _ai_task_wrapper():
+        collected_items_team1_snapshot = list(self.game_state.team1_collected)
+        target_items_team1_snapshot = list(self.game_state.team1_targets) if self.game_state.team1_targets else None
+
+        # --- Team 2 AI ---
+        gesture_team2 = self.team2_guide.decide_gesture(
+            current_grid_snapshot, # Use the same initial snapshot
+            self.game_state.team2_minion_pos,
+            self.game_state.team1_minion_pos
+        )
+        self.send_gesture(2, gesture_team2)
+        
+        collected_items_team2_snapshot = list(self.game_state.team2_collected)
+        target_items_team2_snapshot = list(self.game_state.team2_targets) if self.game_state.team2_targets else None
+        
+        # Callback for when an AI task completes
+        def _ai_task_callback(future, team_id):
+            move_result = None
             try:
-                # active_minion.decide_move is async and will use its own last_gesture_received
-                move_result = asyncio.run(active_minion.decide_move(
-                    current_grid_snapshot,    # Pass snapshot of grid
-                    self.ai_service,          # AIService instance
-                    collected_items_snapshot, # Pass snapshot of collected items
-                    target_items_snapshot     # Pass snapshot of target items
-                ))
-                self.pending_move = move_result
+                move_result = future.result()
             except Exception as e:
-                # Log the error and set a fallback move
-                print(f"Error in AI thread: {e}") # Replace with proper logging
-                self.pending_move = {
+                print(f"Error in AI task for team {team_id}: {e}") # Proper logging recommended
+                move_result = {
                     "move": "stay",
                     "dialogue": "Hmm, I'm a bit stuck.",
-                    "thought": f"An error occurred: {str(e)[:50]}...", # Keep thought brief
+                    "thought": f"An error occurred: {str(e)[:50]}...",
                     "strategy": "Defaulting to a safe move."
                 }
-            # self.ai_thinking will be set to False by take_turn() when self.pending_move is processed.
+            finally:
+                self.pending_moves[team_id] = move_result
+                with self.completion_lock:
+                    self.ai_threads_completed += 1
 
-        # Create and start the AI thread
-        ai_thread = threading.Thread(target=_ai_task_wrapper)
-        ai_thread.daemon = True  # Allow main program to exit even if thread is running
-        ai_thread.start()
+        # Schedule coroutines on the existing event loop for each team's minion
+        # Pass copies of mutable arguments (snapshots) to ensure thread safety if they were modified by minion internally
+        # (though decide_move should ideally not modify its input snapshots)
+        future1 = asyncio.run_coroutine_threadsafe(
+            self.team1_minion.decide_move(
+                [row[:] for row in current_grid_snapshot], # Fresh copy of grid snapshot
+                self.ai_service,
+                list(collected_items_team1_snapshot) if collected_items_team1_snapshot else None,
+                list(target_items_team1_snapshot) if target_items_team1_snapshot else None
+            ),
+            self.async_loop
+        )
+        future1.add_done_callback(lambda f: _ai_task_callback(f, 1))
+
+        future2 = asyncio.run_coroutine_threadsafe(
+            self.team2_minion.decide_move(
+                [row[:] for row in current_grid_snapshot], # Fresh copy of grid snapshot
+                self.ai_service,
+                list(collected_items_team2_snapshot) if collected_items_team2_snapshot else None,
+                list(target_items_team2_snapshot) if target_items_team2_snapshot else None
+            ),
+            self.async_loop
+        )
+        future2.add_done_callback(lambda f: _ai_task_callback(f, 2))
                     
     def send_gesture(self, team_id, gesture):
-        """Send a gesture from the guide to the minion"""
-        self.current_gesture = f"Team {team_id} Guide: {gesture}"
+        """Send a gesture from the guide to the minion and store it."""
+        self.current_gestures[team_id] = f"Team {team_id} Guide: {gesture}"
         
         if team_id == 1:
-            # Team 1 Guide sends gesture to Team 1 Minion
             self.team1_minion.receive_gesture(gesture)
         else:
-            # Team 2 Guide sends gesture to Team 2 Minion
             self.team2_minion.receive_gesture(gesture)
                 
-    def take_turn(self, ai_decision_data):
-        """Process the current team's move using the data from AI decision."""
+    def process_simultaneous_moves(self, decision_team1, decision_team2):
+        """Process moves for both teams, handle collisions, and update game state."""
         if self.game_state.game_over:
             return
-                
-        move_action = ai_decision_data.get("move", "stay")
-        dialogue = ai_decision_data.get("dialogue", "...")
-        thought = ai_decision_data.get("thought", "...")
+
+        move_action_team1 = decision_team1.get("move", "stay")
+        dialogue_team1 = decision_team1.get("dialogue", "...")
+        thought_team1 = decision_team1.get("thought", "...")
+
+        move_action_team2 = decision_team2.get("move", "stay")
+        dialogue_team2 = decision_team2.get("dialogue", "...")
+        thought_team2 = decision_team2.get("thought", "...")
+
+        # Store last moves and UI dialogues/thoughts
+        self.team1_last_move = move_action_team1
+        self.ui_manager.team1_dialogue = dialogue_team1
+        self.ui_manager.team1_thought = thought_team1
+
+        self.team2_last_move = move_action_team2
+        self.ui_manager.team2_dialogue = dialogue_team2
+        self.ui_manager.team2_thought = thought_team2
         
-        # Store the move, dialogue and thought directly in UI manager for the correct team
-        if self.game_state.current_team == 1:
-            self.team1_last_move = move_action
-            self.ui_manager.team1_dialogue = dialogue  # Set team-specific dialogue directly
-            self.ui_manager.team1_thought = thought    # Set team-specific thought directly
-        else:
-            self.team2_last_move = move_action
-            self.ui_manager.team2_dialogue = dialogue  # Set team-specific dialogue directly
-            self.ui_manager.team2_thought = thought    # Set team-specific thought directly
+        # Get current positions (these are lists, so .copy() is important for calculate_new_position)
+        pos_team1_current = self.game_state.team1_minion_pos
+        pos_team2_current = self.game_state.team2_minion_pos
+
+        # Calculate tentative new positions
+        new_pos_team1 = self.game_state.calculate_new_position(pos_team1_current.copy(), move_action_team1)
+        new_pos_team2 = self.game_state.calculate_new_position(pos_team2_current.copy(), move_action_team2)
+
+        # Handle collisions: if minions land on the same spot
+        if new_pos_team1 == new_pos_team2:
+            kicked_minion_team = random.choice([1, 2])
+            original_collided_pos_info = f" (Collided at {new_pos_team1})" # For dialogue
+            if kicked_minion_team == 1:
+                new_pos_team1 = self.game_state.TEAM1_SPAWN_POS[:] # Use a copy
+                self.ui_manager.team1_dialogue += f"{original_collided_pos_info} Kicked back!"
+            else: # kicked_minion_team == 2
+                new_pos_team2 = self.game_state.TEAM2_SPAWN_POS[:] # Use a copy
+                self.ui_manager.team2_dialogue += f"{original_collided_pos_info} Kicked back!"
         
-        # Set dialogue box for overlay/compatibility
-        self.ui_manager.dialogue_box.set_dialogue(dialogue, thought)
+        # Clear old minion positions on the grid.
+        # This assumes the spot becomes empty (0). Item collection should have already updated the grid if an item was there.
+        if 0 <= pos_team1_current[0] < GRID_HEIGHT and 0 <= pos_team1_current[1] < GRID_WIDTH:
+            if self.game_state.grid[pos_team1_current[0]][pos_team1_current[1]] == 4: # Minion 1 marker
+                self.game_state.grid[pos_team1_current[0]][pos_team1_current[1]] = 0
         
-        current_minion_game_pos = None
-        current_minion_collected_items = None
-        current_minion_object = None
-        current_guide_object = None
+        if 0 <= pos_team2_current[0] < GRID_HEIGHT and 0 <= pos_team2_current[1] < GRID_WIDTH:
+            if self.game_state.grid[pos_team2_current[0]][pos_team2_current[1]] == 5: # Minion 2 marker
+                self.game_state.grid[pos_team2_current[0]][pos_team2_current[1]] = 0
         
-        if self.game_state.current_team == 1:
-            current_minion_game_pos = self.game_state.team1_minion_pos
-            current_minion_collected_items = self.game_state.team1_collected
-            current_minion_object = self.team1_minion
-            current_guide_object = self.team1_guide
-        else:
-            current_minion_game_pos = self.game_state.team2_minion_pos
-            current_minion_collected_items = self.game_state.team2_collected
-            current_minion_object = self.team2_minion
-            current_guide_object = self.team2_guide
-            
-        # Calculate new position based on the move action
-        new_pos = self.game_state.calculate_new_position(current_minion_game_pos.copy(), move_action)
-        
-        # Check if there's an item at the new position and update collected items
-        self.game_state.check_item_collection(new_pos, current_minion_collected_items)
-        
-        # Move minion in the game state
-        self.game_state.move_minion(current_minion_game_pos, move_action) # This updates current_minion_game_pos in-place
-        
-        # Update the minion object's internal position
-        current_minion_object.grid_pos = current_minion_game_pos
-        
-        # Update the guide's knowledge of collected items
-        current_guide_object.update_collected(current_minion_collected_items)
-            
-        # Check win conditions
+        # Update state for Team 1
+        self.game_state.check_item_collection(new_pos_team1, self.game_state.team1_collected)
+        self.game_state.team1_minion_pos = new_pos_team1 # Update state tracking
+        self.team1_minion.grid_pos = new_pos_team1      # Update minion object's internal position
+        self.team1_guide.update_collected(self.game_state.team1_collected)
+        if 0 <= new_pos_team1[0] < GRID_HEIGHT and 0 <= new_pos_team1[1] < GRID_WIDTH:
+            self.game_state.grid[new_pos_team1[0]][new_pos_team1[1]] = 4 # Place Minion 1 marker
+
+        # Update state for Team 2
+        self.game_state.check_item_collection(new_pos_team2, self.game_state.team2_collected)
+        self.game_state.team2_minion_pos = new_pos_team2 # Update state tracking
+        self.team2_minion.grid_pos = new_pos_team2      # Update minion object's internal position
+        self.team2_guide.update_collected(self.game_state.team2_collected)
+        if 0 <= new_pos_team2[0] < GRID_HEIGHT and 0 <= new_pos_team2[1] < GRID_WIDTH:
+             # Ensure team 2 doesn't overwrite team 1 if collision resolution failed (highly unlikely)
+            if self.game_state.grid[new_pos_team2[0]][new_pos_team2[1]] == 0 : # Only place if empty
+                 self.game_state.grid[new_pos_team2[0]][new_pos_team2[1]] = 5 # Place Minion 2 marker
+            elif new_pos_team1 != new_pos_team2: # If spot not empty, but it's not T1's new spot, place T2
+                 self.game_state.grid[new_pos_team2[0]][new_pos_team2[1]] = 5
+
+
+        # Check win conditions (this might need to handle simultaneous wins if applicable)
         self.game_state.check_win_conditions()
         
-        # Move to next turn
+        # Move to next turn/round (increments turn counter, etc.)
         self.game_state.next_turn()
-    
+
     def query_openai(self, frame_rgb):
         """Send the captured frame to the gesture recognizer and process the result"""
         # Create a preview of the captured frame
