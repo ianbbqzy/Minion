@@ -1,10 +1,10 @@
 import random
 
 class Minion:
-    def __init__(self, team_id, grid_pos, personality=None):
+    def __init__(self, team_id, grid_pos, personality=None, instructions=None):
         self.team_id = team_id  # 1 or 2
         self.grid_pos = grid_pos  # [y, x]
-        
+        self.instructions = instructions
         # Set personality traits (or generate random)
         if personality is None:
             self.personality = {

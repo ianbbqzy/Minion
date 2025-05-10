@@ -121,7 +121,7 @@ MINION_DECISION_TOOL = {
 }
 
 # Gesture interpretation rules - removed hardcoded rules in favor of camera-detected gestures
-GESTURE_INSTRUCTIONS = [
+INSTRUCTIONS = [
     "Interpret the gesture naturally based on what it describes",
     "For pointing gestures, move in the indicated direction",
     "For facial expressions, respond accordingly"
@@ -161,7 +161,7 @@ def create_minion_prompt(minion, grid, gesture, collected_items, target_items=No
     # Build the prompt
     prompt = {
         "gesture": gesture if gesture else "no gesture",
-        "instructions": GESTURE_INSTRUCTIONS,
+        "instructions": minion.instructions if minion.instructions else INSTRUCTIONS,
         "map": grid_array,
         "personality": personality,
         "collected_items": collected_names,
