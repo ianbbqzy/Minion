@@ -205,6 +205,7 @@ class Game:
         self.dialogue_box.update()
         
         # Update AI thinking
+        print(self.ai_thinking)
         if self.ai_thinking:
             self.ai_thinking_time += self.clock.get_time()
             
@@ -346,7 +347,9 @@ class Game:
         pygame.display.flip()
     
     def start_ai_turn(self):
-        """Start the AI thinking process for the current team"""
+        """Start the AI thinking process for the current team by setting ai-thinking to true
+        Then the next update will start the thinking process
+        In addition, send gesture to the minion"""
         if self.game_state.game_over:
             return
             
@@ -377,18 +380,10 @@ class Game:
         
         if team_id == 1:
             # Team 1 Guide sends gesture to Team 1 Minion
-            move_override = self.team1_minion.receive_gesture(gesture)
-            if move_override is not None:
-                # If the gesture directly indicates a move, use it
-                self.pending_move = move_override
-                self.take_turn(self.pending_move)
+            self.team1_minion.receive_gesture(gesture)
         else:
             # Team 2 Guide sends gesture to Team 2 Minion
-            move_override = self.team2_minion.receive_gesture(gesture)
-            if move_override is not None:
-                # If the gesture directly indicates a move, use it
-                self.pending_move = move_override
-                self.take_turn(self.pending_move)
+            self.team2_minion.receive_gesture(gesture)
                 
     def take_turn(self, move):
         """Process the current team's move"""
