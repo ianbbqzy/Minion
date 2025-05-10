@@ -440,23 +440,7 @@ class Game:
         
         processed_frame_for_api = frame_rgb.copy() 
         original_width_as_rotated_height, _original_height_as_rotated_width, _channels = processed_frame_for_api.shape
-<<<<<<< HEAD
     
-=======
-        
-        # Get the current team's minion
-        current_minion = self.team1_minion if self.game_state.current_team == 1 else self.team2_minion
-        
-        if self.game_state.current_team == 2:
-            # Player 2's turn: use left half of the original view, because the frame is flipped horizontally.
-            # This corresponds to the top half of the rows in the rotated frame.
-            processed_frame_for_api = processed_frame_for_api[:original_width_as_rotated_height // 2, :, :]
-        else:
-            # Player 1's turn: use right half of the original view, because the frame is flipped horizontally.
-            # This corresponds to the bottom half of the rows in the rotated frame.
-            processed_frame_for_api = processed_frame_for_api[original_width_as_rotated_height // 2:, :, :]
->>>>>>> 0f8ab40f00d6cca11e29ab5987886638a7340587
-            
         # Pass the correctly cropped frame to the gesture recognizer
         preview_surface_team1 = self.gesture_recognizer.capture_frame(1, processed_frame_for_api[original_width_as_rotated_height // 2:, :, :])
         preview_surface_team2 = self.gesture_recognizer.capture_frame(2, processed_frame_for_api[:original_width_as_rotated_height // 2, :, :])
@@ -478,16 +462,9 @@ class Game:
         future_team1 = asyncio.run_coroutine_threadsafe(
             self.gesture_recognizer.analyze_gesture(1), self.async_loop)
 
-<<<<<<< HEAD
-        future_team1.add_done_callback(
-        lambda f: print("Detect gesture for team 1:", f.result()))
-
         future_team2 = asyncio.run_coroutine_threadsafe(
             self.gesture_recognizer.analyze_gesture(2), self.async_loop)
 
-        future_team2.add_done_callback(
-        lambda f: print("Detect gesture for team 2:", f.result()))
-=======
         # Handle the result asynchronously
         def process_analysis_result(future):
             try:
@@ -519,11 +496,11 @@ class Game:
             except Exception as e:
                 print(f"Error processing analysis result: {e}")
                 
-        future.add_done_callback(process_analysis_result)
+        future_team1.add_done_callback(process_analysis_result)
+        future_team2.add_done_callback(process_analysis_result)
 
     def on_video_playback_complete(self):
         """Handle completion of a video playback"""
         # This gets called when the video is finished playing
         # We can use this to do any cleanup or additional effects after the video
         print("Video playback complete - Game notified")
->>>>>>> 0f8ab40f00d6cca11e29ab5987886638a7340587
