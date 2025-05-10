@@ -75,6 +75,11 @@ class Game:
         self.team1_2_last_move = ""
         self.team2_1_last_move = ""
         self.team2_2_last_move = ""
+
+        # Cound down logic 
+        self.countdown_active = True
+        self.countdown_start_time = pygame.time.get_ticks()
+        self.countdown_duration = 3  # seconds
         
         # Main loop control
         self.running = True
@@ -250,7 +255,20 @@ class Game:
             self.webcam_available,
             self.ai_turn_processing # Use this to show general "AI is thinking" if needed
         )
-    
+
+        # Countdown
+        if self.countdown_active:
+            elapsed = (pygame.time.get_ticks() - self.countdown_start_time) // 1000
+            remaining = max(0, self.countdown_duration - elapsed)
+
+            # Update button label to show countdown
+            self.ui_manager.webcam_button.text = f"Capturing in {remaining}..."
+
+            if remaining == 0 :
+                self.query_openai(self.ui_manager.webcam_display.last_frame.copy())
+                self.countdown_start_time = pygame.time.get_ticks()
+        else:
+            self.countdown_start_time = pygame.time.get_ticks()
     def draw(self):
         """Render the game"""
         # Draw UI components (background, panels, buttons, webcam)
@@ -278,6 +296,12 @@ class Game:
         
         # Update the display
         pygame.display.flip()
+
+
+    def countdown_toggle(self):
+        self.countdown_active = not self.countdown_active
+        if self.countdown_active == False :
+             self.ui_manager.webcam_button.text = "Pause capture"
     
     def start_both_ai_turns(self):
         """Start the AI thinking process for both teams simultaneously."""
