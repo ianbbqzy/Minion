@@ -2,6 +2,7 @@ import pygame
 import random
 import os
 from typing import Dict, List, Tuple, Union
+from src.minion.ai_controller import AIController
 
 class Minion(pygame.sprite.Sprite):
     def __init__(self, grid_x: int, grid_y: int, tile_size: int) -> None:
@@ -26,6 +27,9 @@ class Minion(pygame.sprite.Sprite):
         # After load_sprites is called
         self.direction_name: str = self.get_direction_name()
         self.image: pygame.Surface = self.sprites[self.direction_name][0]
+        
+        # Create AI controller for movement
+        self.ai_controller = AIController()
         
     def load_sprites(self) -> None:
         # Load spritesheet for each direction
@@ -131,9 +135,10 @@ class Minion(pygame.sprite.Sprite):
         
         # Movement update (every 2 seconds)
         if current_time - self.move_timer >= self.move_interval:
-            # Choose a random direction
-            self.direction = random.choice([(-1, 0), (1, 0), (0, -1), (0, 1)])
-            self.direction_name = self.get_direction_name()
+            # Ask AI controller for direction instead of random choice
+            direction_name = self.ai_controller.get_movement_direction()
+            self.direction = self.ai_controller.direction_to_tuple(direction_name)
+            self.direction_name = direction_name
             
             # Move exactly 1 grid in the chosen direction
             dx, dy = self.direction

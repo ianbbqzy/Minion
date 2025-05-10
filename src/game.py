@@ -4,7 +4,7 @@ import random
 import cv2
 import numpy as np
 from typing import List, Tuple, Optional, Union
-from src.sprites import Minion
+from src.minion.sprites import Minion
 from src.tilemap import TileMap
 
 class Game:
