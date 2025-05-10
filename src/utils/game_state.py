@@ -117,12 +117,12 @@ class GameState:
         if team1_matches >= 5:
             self.game_over = True
             self.winner = 1
-            
+
         # Check if team 2 has collected all targets
         team2_matches = 0
         for item in self.team2_targets:
             if self.team2_collected.count(item) > 0:
-                team2_matches += 2
+                team2_matches += 1
                 
         if team2_matches >= 5:
             self.game_over = True

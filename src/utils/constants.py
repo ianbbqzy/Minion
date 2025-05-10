@@ -3,8 +3,8 @@ Game constants used throughout the application
 """
 
 # Screen dimensions
-SCREEN_WIDTH = 1200
-SCREEN_HEIGHT = 800
+SCREEN_WIDTH = 1920
+SCREEN_HEIGHT = 1080
 
 # Game grid settings
 TILE_SIZE = 60
@@ -12,7 +12,7 @@ GRID_WIDTH = 8
 GRID_HEIGHT = 10
 
 # Webcam settings
-WEBCAM_WIDTH = 300
+WEBCAM_WIDTH = 400
 WEBCAM_HEIGHT = 225
 
 # Game mechanics

@@ -125,15 +125,15 @@ class WebcamDisplay:
         text = self.btn_font.render(message, True, WHITE)
         screen.blit(text, text.get_rect(center=(self.rect.centerx, self.rect.centery)))
     
-    def draw_preview(self, screen, y_position):
+    def draw_preview(self, screen):
         """Draw the captured frame preview"""
         if self.captured_preview is not None:
-            screen.blit(self.captured_preview, (self.rect.x, y_position))
-            pygame.draw.rect(screen, WHITE, (self.rect.x, y_position, self.rect.width, self.rect.height), 2)
+            screen.blit(self.captured_preview, (self.rect.x + 600, self.rect.y))
+            pygame.draw.rect(screen, WHITE, (self.rect.x + 600, self.rect.y, self.rect.width, self.rect.height), 2)
             
             # Label
             label = self.btn_font.render("Last capture", True, WHITE)
-            screen.blit(label, (self.rect.x, y_position + self.rect.height + 4))
+            screen.blit(label, (self.rect.x + 600, self.rect.y + self.rect.height + 4))
 
     def set_captured_preview(self, surface):
         """Set the preview of the captured frame"""

@@ -48,8 +48,8 @@ class Game:
         self.btn_font = pygame.font.SysFont(None, 24)
         
         # Calculate board position to center it
-        self.BOARD_X = (SCREEN_WIDTH - (GRID_WIDTH * TILE_SIZE)) // 2
-        self.BOARD_Y = (SCREEN_HEIGHT - (GRID_HEIGHT * TILE_SIZE)) // 2
+        self.BOARD_X = (SCREEN_WIDTH - (GRID_WIDTH * TILE_SIZE) - 400) // 2
+        self.BOARD_Y = (SCREEN_HEIGHT - (GRID_HEIGHT * TILE_SIZE) - 400) // 2
         
         # Initialize components
         self.initialize_components()
@@ -92,30 +92,34 @@ class Game:
         self.ai_button = Button(
             self.ai_button_rect,
             "Take AI Turn",
-            self.font
+            self.btn_font
         )
 
         # Webcam settings
         self.webcam = None
         self.webcam_available = False
         self.init_webcam()
-        
-        # Webcam display
+    
+        # Center horizontally, place at bottom with some margin
+        bottom_margin = 50
+        left_shift = 300
+        webcam_x = (SCREEN_WIDTH - WEBCAM_WIDTH) // 2 - left_shift
+        webcam_y = SCREEN_HEIGHT - WEBCAM_HEIGHT - bottom_margin
+
         self.webcam_display = WebcamDisplay(
-            SCREEN_WIDTH - WEBCAM_WIDTH - 10,
-            10,
+            webcam_x,
+            webcam_y,
             WEBCAM_WIDTH, 
             WEBCAM_HEIGHT,
             self.btn_font
         )
         
         # Webcam button
-        btn_w, btn_h = WEBCAM_WIDTH, 40
-        btn_x = SCREEN_WIDTH - btn_w - 10
-        btn_y = 10 + WEBCAM_HEIGHT + 8  # 8-px gap below the camera view
+        btn_x = self.ai_button_rect.x
+        btn_y = self.ai_button_rect.y + self.ai_button_rect.height + 10  # Place just below AI button
         self.webcam_button = Button(
-            pygame.Rect(btn_x, btn_y, btn_w, btn_h),
-            "Query AI",
+            pygame.Rect(btn_x, btn_y, 200, 60),
+            "Query with Camera",
             self.btn_font
         )
         
@@ -278,9 +282,7 @@ class Game:
         # Draw webcam button
         self.webcam_button.draw(self.screen)
         
-        # Draw webcam preview if available (this was previously removed)
-        preview_y = self.webcam_button.rect.y + self.webcam_button.rect.height + PREVIEW_GAP
-        self.webcam_display.draw_preview(self.screen, preview_y)
+        self.webcam_display.draw_preview(self.screen)
         
         # Draw game board
         self.board_renderer.draw(self.screen, self.game_state.grid)
