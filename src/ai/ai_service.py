@@ -32,7 +32,7 @@ class AIService:
         else:
             self.client = None
             
-        self.model = "gpt-3.5-turbo"  # Default model, can be changed to gpt-4 for better reasoning
+        self.model = "gpt-4o"  # Default model, can be changed to gpt-4 for better reasoning
         
     async def get_minion_action(self, minion, grid, gesture, collected_items, target_items=None):
         """

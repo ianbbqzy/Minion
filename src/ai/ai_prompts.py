@@ -22,9 +22,12 @@ You will receive four inputs:
 3. `map` (array of arrays, 8 rows x 10 columns): 
   A grid representing the game board, where each cell contains one of:
   - `"0"` = empty
-  - `"A"`, `"B"`, `"C"` = collectible items
-  - `"M"` = your current position
-  - `"X"` = enemy player position
+  - `"B"` = banana
+  - `"D"` = donut
+  - `"S"` = sushi
+  - `"Y"` = your current position
+  - `"T"` = your teammate position
+  - `"O"` = enemy player position
 
 4. `personality` (object): 
   Contains the NPC's traits:
@@ -143,7 +146,7 @@ def create_minion_prompt(minion, grid, gesture, collected_items, target_items=No
     - A string containing the prompt for OpenAI
     """
     # Create a grid representation as a 2D array
-    grid_array = format_grid_for_prompt(grid, minion.grid_pos)
+    grid_array = format_grid_for_prompt(grid, minion.grid_pos, minion.team_id)
     
     # Translate numeric items to readable names for debugging
     item_names = {1: "sushi", 2: "donut", 3: "banana"}
@@ -174,7 +177,7 @@ def create_minion_prompt(minion, grid, gesture, collected_items, target_items=No
         
     return prompt
     
-def format_grid_for_prompt(grid, minion_pos):
+def format_grid_for_prompt(grid, minion_pos, team_id):
     """Format the grid into a 2D array for prompt"""
     result = []
     for y in range(len(grid)):
@@ -183,17 +186,23 @@ def format_grid_for_prompt(grid, minion_pos):
             cell = grid[y][x]
             # Mark the minion's position
             if y == minion_pos[0] and x == minion_pos[1]:
-                row.append("M")
+                row.append("Y") # your position
             elif cell == 0:
                 row.append("0")  # Empty
             elif cell == 1:
-                row.append("A")  # Sushi
+                row.append("S")  # Sushi
             elif cell == 2:
-                row.append("B")  # Donut
+                row.append("D")  # Donut
             elif cell == 3:
-                row.append("C")  # Banana
-            elif cell == 4 or cell == 5:
-                row.append("X")  # Other minion
+                row.append("B")  # Banana
+            elif team_id == 1 and (cell == 4 or cell == 6):
+                row.append("T")  # Your teammate
+            elif team_id == 2 and (cell == 5 or cell == 7):
+                row.append("O")  # Your Opponents
+            elif team_id == 1 and (cell == 5 or cell == 7):
+                row.append("O")  # Your Opponents   
+            elif team_id == 2 and (cell == 4 or cell == 6):
+                row.append("T")  # Your teammate
             else:
                 row.append("?")
         result.append(row)
