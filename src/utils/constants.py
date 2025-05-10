@@ -42,8 +42,10 @@ TILE_COLORS = {
     "sushi": (30, 144, 255),   # Blue
     "donut": (139, 69, 19),    # Brown
     "banana": (238, 214, 175), # Sandy/Yellow
-    "team1": (255, 100, 100),  # Red-ish
-    "team2": (100, 100, 255)   # Blue-ish
+    "team1_minion_1": (255, 100, 100),  # Red-ish
+    "team1_minion_2": (100, 100, 255),  # Blue-ish
+    "team2_minion_1": (255, 255, 0),  # Yellow-ish
+    "team2_minion_2": (0, 255, 0)   # Green-ish
 }
 
 # Item codes
@@ -51,9 +53,13 @@ EMPTY = 0
 SUSHI = 1
 DONUT = 2
 BANANA = 3
-TEAM1_MINION = 4
-TEAM2_MINION = 5
+TEAM1_MINION_1 = 4
+TEAM1_MINION_2 = 5
+TEAM2_MINION_1 = 6
+TEAM2_MINION_2 = 7
 
 # UI Settings
 PREVIEW_GAP = 8  # Vertical spacing between UI blocks
 DIALOGUE_DISPLAY_TIME = 3000  # 3 seconds 
+
+MINIONS_PER_TEAM = 2
