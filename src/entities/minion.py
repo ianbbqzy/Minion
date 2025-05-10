@@ -35,11 +35,6 @@ class Minion:
         """Process a gesture from the guide and update item priorities"""
         self.last_gesture = gesture
         
-        # For direct movement commands, we can still return them immediately
-        if gesture in ["point up", "point down", "point left", "point right"]:
-            return gesture.split(" ")[1]  # Extract direction
-        return None
-        
     
     def decide_move(self, grid, ai_service=None, collected_items=None, target_items=None):
         """Decide next move based on personality and grid state"""
