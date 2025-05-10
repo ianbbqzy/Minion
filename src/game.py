@@ -67,6 +67,9 @@ class Game:
         
         # Main loop control
         self.running = True
+
+        self.async_loop = asyncio.new_event_loop()
+        threading.Thread(target=self.async_loop.run_forever, daemon=True).start()
         
     def initialize_components(self):
         """Initialize UI and rendering components"""
@@ -470,10 +473,11 @@ class Game:
         self.webcam_display.set_captured_preview(preview_surface)
         
         # Analyze the gesture
-        gesture = self.gesture_recognizer.analyze_gesture()
+        future = asyncio.run_coroutine_threadsafe(
+            self.gesture_recognizer.analyze_gesture(), self.async_loop)
 
-        asyncio.run_coroutine_threadsafe(
-            self.gesture_recognizer.analyze_gesture(), asyncio.get_event_loop())
+        future.add_done_callback(
+        lambda f: print("Detect gesture:", f.result()))
         
         # You can add custom handling of the gesture here
         # For example, mapping gestures to in-game actions

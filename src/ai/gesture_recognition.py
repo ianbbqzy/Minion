@@ -94,7 +94,6 @@ class GestureRecognizer:
             
             # Extract the gesture from the response
             self.last_gesture = response.choices[0].message.content.strip()
-            print("Gesture:", self.last_gesture) 
             return self.last_gesture
             
         except Exception as e:
