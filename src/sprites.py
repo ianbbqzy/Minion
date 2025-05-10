@@ -1,38 +1,43 @@
 import pygame
 import random
 import os
+from typing import Dict, List, Tuple, Union
 
 class Minion(pygame.sprite.Sprite):
-    def __init__(self, grid_x, grid_y, tile_size):
+    def __init__(self, grid_x: int, grid_y: int, tile_size: int) -> None:
         super().__init__()
-        self.grid_x = grid_x
-        self.grid_y = grid_y
-        self.tile_size = tile_size
+        self.grid_x: int = grid_x
+        self.grid_y: int = grid_y
+        self.tile_size: int = tile_size
         
         # Direction: (dx, dy) where each value is -1, 0, or 1
-        self.direction = random.choice([(-1, 0), (1, 0), (0, -1), (0, 1)])
+        self.direction: Tuple[int, int] = random.choice([(-1, 0), (1, 0), (0, -1), (0, 1)])
         
         # Movement timer
-        self.move_timer = 0
-        self.move_interval = 2000  # 2 seconds in milliseconds
+        self.move_timer: int = 0
+        self.move_interval: int = 2000  # 2 seconds in milliseconds
         
         # Animation frames
         self.load_sprites()
-        self.current_frame = 0
-        self.animation_speed = 0.2  # Frames per update
-        self.animation_timer = 0
+        self.current_frame: int = 0
+        self.animation_speed: float = 0.2  # Frames per update
+        self.animation_timer: float = 0
         
-    def load_sprites(self):
+        # After load_sprites is called
+        self.direction_name: str = self.get_direction_name()
+        self.image: pygame.Surface = self.sprites[self.direction_name][0]
+        
+    def load_sprites(self) -> None:
         # Load spritesheet for each direction
         # We'll check if the sprites exist, otherwise use placeholder graphics
-        self.sprites = {
+        self.sprites: Dict[str, List[pygame.Surface]] = {
             "up": [],
             "down": [],
             "left": [],
             "right": []
         }
         
-        sprite_dir = os.path.join("assets", "images", "minions")
+        sprite_dir: str = os.path.join("assets", "images", "minions")
         if os.path.exists(os.path.join(sprite_dir, "minion_down_1.png")):
             # Load real sprites if they exist
             for i in range(1, 5):  # 4 frames per direction
@@ -42,12 +47,12 @@ class Minion(pygame.sprite.Sprite):
                 self.sprites["left"].append(pygame.image.load(os.path.join(sprite_dir, f"minion_left_{i}.png")))
         else:
             # Create placeholder colored rectangles
-            colors = [(random.randint(200, 255), random.randint(200, 255), 0) for _ in range(4)]
+            colors: List[Tuple[int, int, int]] = [(random.randint(200, 255), random.randint(200, 255), 0) for _ in range(4)]
             
             for i in range(4):
                 # Create surface for each direction and frame
                 for direction in ["up", "down", "left", "right"]:
-                    surf = pygame.Surface((self.tile_size, self.tile_size), pygame.SRCALPHA)
+                    surf: pygame.Surface = pygame.Surface((self.tile_size, self.tile_size), pygame.SRCALPHA)
                     
                     # Draw minion body
                     pygame.draw.circle(surf, colors[i], 
@@ -77,11 +82,11 @@ class Minion(pygame.sprite.Sprite):
                                           (self.tile_size // 2, self.tile_size * 2 // 3)])
                     
                     # Add slight animation offset based on frame number
-                    offset = (i * 2) % 8 - 4
+                    offset: int = (i * 2) % 8 - 4
                     if direction in ["left", "right"]:
                         # Draw eyes with slight y-offset for animation
-                        eye_y = self.tile_size // 2 - 5 + offset
-                        eye_x_offset = 8
+                        eye_y: int = self.tile_size // 2 - 5 + offset
+                        eye_x_offset: int = 8
                         pygame.draw.circle(surf, (255, 255, 255), 
                                          (self.tile_size // 2 - eye_x_offset, eye_y), 5)
                         pygame.draw.circle(surf, (255, 255, 255), 
@@ -92,8 +97,8 @@ class Minion(pygame.sprite.Sprite):
                                          (self.tile_size // 2 + eye_x_offset, eye_y), 2)
                     else:
                         # Draw eyes with slight x-offset for animation
-                        eye_y = self.tile_size // 2 - 5
-                        eye_x_offset = 8 + offset
+                        eye_y: int = self.tile_size // 2 - 5
+                        eye_x_offset: int = 8 + offset
                         pygame.draw.circle(surf, (255, 255, 255), 
                                          (self.tile_size // 2 - eye_x_offset, eye_y), 5)
                         pygame.draw.circle(surf, (255, 255, 255), 
@@ -105,11 +110,7 @@ class Minion(pygame.sprite.Sprite):
                         
                     self.sprites[direction].append(surf)
                     
-        # Set current image
-        self.direction_name = self.get_direction_name()
-        self.image = self.sprites[self.direction_name][0]
-        
-    def get_direction_name(self):
+    def get_direction_name(self) -> str:
         dx, dy = self.direction
         if dx < 0:
             return "left"
@@ -120,9 +121,9 @@ class Minion(pygame.sprite.Sprite):
         else:
             return "down"
         
-    def update(self, map_width, map_height):
+    def update(self, map_width: int, map_height: int) -> None:
         # Animation update (continuous)
-        current_time = pygame.time.get_ticks()
+        current_time: int = pygame.time.get_ticks()
         self.animation_timer += 0.1
         if self.animation_timer >= 1:
             self.animation_timer = 0
@@ -136,8 +137,8 @@ class Minion(pygame.sprite.Sprite):
             
             # Move exactly 1 grid in the chosen direction
             dx, dy = self.direction
-            new_grid_x = self.grid_x + dx
-            new_grid_y = self.grid_y + dy
+            new_grid_x: int = self.grid_x + dx
+            new_grid_y: int = self.grid_y + dy
             
             # Check boundaries and only move if within bounds
             if 0 <= new_grid_x < map_width:
@@ -149,13 +150,13 @@ class Minion(pygame.sprite.Sprite):
             # Reset timer
             self.move_timer = current_time
             
-    def draw(self, screen):
+    def draw(self, screen: pygame.Surface) -> None:
         # Get current sprite frame
         self.image = self.sprites[self.direction_name][self.current_frame]
         
         # Draw the minion at its grid position
-        screen_x = self.grid_x * self.tile_size
-        screen_y = self.grid_y * self.tile_size
+        screen_x: int = self.grid_x * self.tile_size
+        screen_y: int = self.grid_y * self.tile_size
         
         # Draw the sprite
         screen.blit(self.image, (screen_x, screen_y)) 

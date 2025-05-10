@@ -3,26 +3,27 @@ import sys
 import random
 import cv2
 import numpy as np
+from typing import List, Tuple, Optional, Union
 from src.sprites import Minion
 from src.tilemap import TileMap
 
 class Game:
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialize pygame
         pygame.init()
         
         # Constants
-        self.SCREEN_WIDTH = 1100  # Increased to accommodate webcam feed
-        self.SCREEN_HEIGHT = 600
-        self.TILE_SIZE = 64
-        self.MAP_WIDTH = 12
-        self.MAP_HEIGHT = 9
+        self.SCREEN_WIDTH: int = 1100  # Increased to accommodate webcam feed
+        self.SCREEN_HEIGHT: int = 600
+        self.TILE_SIZE: int = 64
+        self.MAP_WIDTH: int = 12
+        self.MAP_HEIGHT: int = 9
         
         # Webcam settings
-        self.WEBCAM_WIDTH = 300
-        self.WEBCAM_HEIGHT = 225
-        self.webcam = None
-        self.webcam_available = False
+        self.WEBCAM_WIDTH: int = 300
+        self.WEBCAM_HEIGHT: int = 225
+        self.webcam: Optional[cv2.VideoCapture] = None
+        self.webcam_available: bool = False
         try:
             self.webcam = cv2.VideoCapture(0)
             if self.webcam.isOpened():
@@ -39,27 +40,29 @@ class Game:
             print(f"Error initializing webcam: {e}")
         
         # Colors
-        self.WHITE = (255, 255, 255)
-        self.BLACK = (0, 0, 0)
+        self.WHITE: Tuple[int, int, int] = (255, 255, 255)
+        self.BLACK: Tuple[int, int, int] = (0, 0, 0)
         
         # Create the screen
-        self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
+        self.screen: pygame.Surface = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
         pygame.display.set_caption("Minion Movement Game")
-        self.clock = pygame.time.Clock()
+        self.clock: pygame.time.Clock = pygame.time.Clock()
         
         # Create tilemap
-        self.tilemap = TileMap(self.MAP_WIDTH, self.MAP_HEIGHT, self.TILE_SIZE)
+        self.tilemap: TileMap = TileMap(self.MAP_WIDTH, self.MAP_HEIGHT, self.TILE_SIZE)
         
         # Create minions
-        self.minions = []
+        self.minions: List[Minion] = []
         for i in range(5):
             self.minions.append(Minion(
                 random.randint(0, self.MAP_WIDTH-1),
                 random.randint(0, self.MAP_HEIGHT-1),
                 self.TILE_SIZE
             ))
+        
+        self.running: bool = False
             
-    def run(self):
+    def run(self) -> None:
         # Main game loop
         self.running = True
         while self.running:
@@ -76,18 +79,18 @@ class Game:
         pygame.quit()
         sys.exit()
         
-    def handle_events(self):
+    def handle_events(self) -> None:
         # Handle events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
                 
-    def update(self):
+    def update(self) -> None:
         # Update minions
         for minion in self.minions:
             minion.update(self.MAP_WIDTH, self.MAP_HEIGHT)
             
-    def draw(self):
+    def draw(self) -> None:
         # Clear the screen
         self.screen.fill(self.BLACK)
         
@@ -100,6 +103,8 @@ class Game:
         
         # Get webcam frame and convert it to a pygame surface
         if self.webcam_available:
+            ret: bool
+            frame: np.ndarray
             ret, frame = self.webcam.read()
             if ret:
                 # Resize frame to fit our display area
@@ -110,7 +115,7 @@ class Game:
                 frame = np.rot90(frame)
                 frame = np.flipud(frame)
                 # Create pygame surface from numpy array
-                webcam_surface = pygame.surfarray.make_surface(frame)
+                webcam_surface: pygame.Surface = pygame.surfarray.make_surface(frame)
                 # Draw webcam feed on the right side of the screen
                 self.screen.blit(webcam_surface, (self.SCREEN_WIDTH - self.WEBCAM_WIDTH - 10, 10))
                 
@@ -123,9 +128,9 @@ class Game:
                 pygame.draw.rect(self.screen, (50, 50, 50), 
                                 (self.SCREEN_WIDTH - self.WEBCAM_WIDTH - 10, 10, 
                                  self.WEBCAM_WIDTH, self.WEBCAM_HEIGHT), 0)
-                font = pygame.font.SysFont(None, 24)
-                text = font.render("Camera Unavailable", True, self.WHITE)
-                text_rect = text.get_rect(center=(self.SCREEN_WIDTH - self.WEBCAM_WIDTH//2 - 10, 
+                font: pygame.font.Font = pygame.font.SysFont(None, 24)
+                text: pygame.Surface = font.render("Camera Unavailable", True, self.WHITE)
+                text_rect: pygame.Rect = text.get_rect(center=(self.SCREEN_WIDTH - self.WEBCAM_WIDTH//2 - 10, 
                                                   self.WEBCAM_HEIGHT//2 + 10))
                 self.screen.blit(text, text_rect)
         else:
@@ -133,9 +138,9 @@ class Game:
             pygame.draw.rect(self.screen, (50, 50, 50), 
                             (self.SCREEN_WIDTH - self.WEBCAM_WIDTH - 10, 10, 
                              self.WEBCAM_WIDTH, self.WEBCAM_HEIGHT), 0)
-            font = pygame.font.SysFont(None, 24)
-            text = font.render("Camera Unavailable", True, self.WHITE)
-            text_rect = text.get_rect(center=(self.SCREEN_WIDTH - self.WEBCAM_WIDTH//2 - 10, 
+            font: pygame.font.Font = pygame.font.SysFont(None, 24)
+            text: pygame.Surface = font.render("Camera Unavailable", True, self.WHITE)
+            text_rect: pygame.Rect = text.get_rect(center=(self.SCREEN_WIDTH - self.WEBCAM_WIDTH//2 - 10, 
                                               self.WEBCAM_HEIGHT//2 + 10))
             self.screen.blit(text, text_rect)
         
