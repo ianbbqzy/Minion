@@ -42,10 +42,8 @@ class EventHandler:
         if self.game.ai_button.is_clicked(pos):
             # Skip AI thinking time if already thinking
             if self.game.ai_thinking:
-                print("AI thinking already")
                 self.game.ai_thinking_time = self.game.ai_thinking_max_time
             else:
-                print("AI thinking not already")
                 # Take an AI turn
                 self.game.start_ai_turn()
         
