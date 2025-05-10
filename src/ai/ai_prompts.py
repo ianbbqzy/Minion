@@ -76,39 +76,42 @@ Rules:
 
 # Tool definition for minion decision making
 MINION_DECISION_TOOL = {
-    "name": "decide_next_action",
-    "description": "Decides the NPC's strategy, next move, dialogue, and internal thought based on gesture, instructions, map, and personality.",
-    "parameters": {
-        "type": "object",
-        "required": [
-            "strategy",
-            "next_move",
-            "dialogue",
-            "thought"
-        ],
-        "properties": {
-            "thought": {
-                "type": "string",
-                "description": "A short explanation of what the NPC is thinking internally while making the move or saying the dialogue."
-            },
-            "dialogue": {
-                "type": "string",
-                "description": "A short dialogue line spoken by the NPC when making the move."
-            },
-            "strategy": {
-                "type": "string",
-                "description": "A short explanation of the overall strategy, including decoded meaning from instructions, map analysis, and personality factors."
-            },
-            "next_move": {
-                "enum": [
-                    "up",
-                    "down",
-                    "left",
-                    "right",
-                    "stay"
-                ],
-                "type": "string",
-                "description": "The immediate next move to make."
+    "type": "function",
+    "function": {
+        "name": "decide_next_action",
+        "description": "Decides the NPC's strategy, next move, dialogue, and internal thought based on gesture, instructions, map, and personality.",
+        "parameters": {
+            "type": "object",
+            "required": [
+                "strategy",
+                "next_move",
+                "dialogue",
+                "thought"
+            ],
+            "properties": {
+                "thought": {
+                    "type": "string",
+                    "description": "A short explanation of what the NPC is thinking internally while making the move or saying the dialogue."
+                },
+                "dialogue": {
+                    "type": "string",
+                    "description": "A short dialogue line spoken by the NPC when making the move."
+                },
+                "strategy": {
+                    "type": "string",
+                    "description": "A short explanation of the overall strategy, including decoded meaning from instructions, map analysis, and personality factors."
+                },
+                "next_move": {
+                    "enum": [
+                        "up",
+                        "down",
+                        "left",
+                        "right",
+                        "stay"
+                    ],
+                    "type": "string",
+                    "description": "The immediate next move to make."
+                }
             }
         }
     }
